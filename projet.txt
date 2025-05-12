@@ -841,8 +841,11 @@ class PlanteController extends AbstractController
 
 namespace App\Controller\Admin;
 
-use App\Entity\Utilisateur;
+use App\Entity\User;
+use App\Form\UserType;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
@@ -850,10 +853,55 @@ use Symfony\Component\Routing\Annotation\Route;
 class UtilisateurController extends AbstractController
 {
 	#[Route('', name: 'admin_utilisateurs_index')]
-	public function index(): Response
+	public function index(EntityManagerInterface $em): Response
 	{
-		// À implémenter
-		return $this->render('admin/utilisateur/index.html.twig');
+		$users = $em->getRepository(User::class)->findAll();
+		return $this->render('admin/utilisateur/index.html.twig', ['users' => $users]);
+	}
+
+	#[Route('/nouveau', name: 'admin_users_create')]
+	public function create(Request $request, EntityManagerInterface $em): Response
+	{
+		$user = new User();
+		$form = $this->createForm(UserType::class, $user);
+		$form->handleRequest($request);
+
+		if ($form->isSubmitted() && $form->isValid()) {
+			$em->persist($user);
+			$em->flush();
+			return $this->redirectToRoute('admin_utilisateurs_index');
+		}
+
+		return $this->render('admin/utilisateur/form.html.twig', [
+			'userForm' => $form->createView()
+		]);
+	}
+
+	#[Route('/{id}/modifier', name: 'admin_users_edit')]
+	public function edit(User $user, Request $request, EntityManagerInterface $em): Response
+	{
+		$form = $this->createForm(UserType::class, $user);
+		$form->handleRequest($request);
+
+		if ($form->isSubmitted() && $form->isValid()) {
+			$em->flush();
+			return $this->redirectToRoute('admin_utilisateurs_index');
+		}
+
+		return $this->render('admin/utilisateur/form.html.twig', [
+			'userForm' => $form->createView(),
+			'user' => $user
+		]);
+	}
+
+	#[Route('/{id}/supprimer', name: 'admin_users_delete', methods: ['POST'])]
+	public function delete(Request $request, User $user, EntityManagerInterface $em): Response
+	{
+		if ($this->isCsrfTokenValid('delete'.$user->getId(), $request->request->get('_token'))) {
+			$em->remove($user);
+			$em->flush();
+		}
+		return $this->redirectToRoute('admin_utilisateurs_index');
 	}
 }
 
@@ -1031,6 +1079,149 @@ class RegistrationController extends AbstractController
 }
 
 
+# src/Form/PlanteType.php
+
+<?php
+
+namespace App\Form;
+
+use App\Entity\Plant;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\IntegerType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\TextareaType;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
+
+class PlanteType extends AbstractType
+{
+	public function buildForm(FormBuilderInterface $builder, array $options): void
+	{
+		$builder
+			->add('email')
+			->add('name', TextType::class, [
+				'label' => 'Nom'
+			])
+			->add('price', IntegerType::class, [
+				'label' => 'Prix (€)'
+			])
+			->add('description', TextareaType::class, [
+				'label' => 'Description',
+				'required' => false
+			])
+			->add('stock', IntegerType::class, [
+				'label' => 'Stock'
+			]);
+	}
+
+	public function configureOptions(OptionsResolver $resolver): void
+	{
+		$resolver->setDefaults([
+			'data_class' => Plant::class,
+		]);
+	}
+}
+
+
+# src/Form/RegistrationForm.php
+
+<?php
+
+namespace App\Form;
+
+use App\Entity\User;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+use Symfony\Component\Form\Extension\Core\Type\PasswordType;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Validator\Constraints\IsTrue;
+use Symfony\Component\Validator\Constraints\Length;
+use Symfony\Component\Validator\Constraints\NotBlank;
+
+class RegistrationForm extends AbstractType
+{
+    public function buildForm(FormBuilderInterface $builder, array $options): void
+    {
+        $builder
+            ->add('email')
+            ->add('agreeTerms', CheckboxType::class, [
+                'mapped' => false,
+                'constraints' => [
+                    new IsTrue([
+                        'message' => 'You should agree to our terms.',
+                    ]),
+                ],
+            ])
+            ->add('plainPassword', PasswordType::class, [
+                // instead of being set onto the object directly,
+                // this is read and encoded in the controller
+                'mapped' => false,
+                'attr' => ['autocomplete' => 'new-password'],
+                'constraints' => [
+                    new NotBlank([
+                        'message' => 'Please enter a password',
+                    ]),
+                    new Length([
+                        'min' => 6,
+                        'minMessage' => 'Your password should be at least {{ limit }} characters',
+                        // max length allowed by Symfony for security reasons
+                        'max' => 4096,
+                    ]),
+                ],
+            ])
+        ;
+    }
+
+    public function configureOptions(OptionsResolver $resolver): void
+    {
+        $resolver->setDefaults([
+            'data_class' => User::class,
+        ]);
+    }
+}
+
+
+# src/Form/UserType.php
+
+<?php
+
+namespace App\Form;
+
+use App\Entity\User;
+use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+use Symfony\Component\Form\Extension\Core\Type\EmailType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
+
+class UserType extends AbstractType
+{
+	public function buildForm(FormBuilderInterface $builder, array $options): void
+	{
+		$builder
+			->add('name', TextType::class, [
+				'label' => 'Nom'
+			])
+			->add('email', EmailType::class, [
+				'label' => 'Email'
+			])
+			->add('admin', CheckboxType::class, [
+				'label' => 'Administrateur',
+				'required' => false
+			]);
+	}
+
+	public function configureOptions(OptionsResolver $resolver): void
+	{
+		$resolver->setDefaults([
+			'data_class' => User::class,
+		]);
+	}
+}
+
+
 # templates/admin/utilisateur/show.html.twig
 
 {% extends 'admin/base.html.twig' %}
@@ -1096,6 +1287,31 @@ class RegistrationController extends AbstractController
     </tbody>
   </table>
 {% endblock %}
+
+
+# templates/admin/utilisateur/_form.html.twig
+
+{{ form_start(form) }}
+  <div class="mb-3">
+    {{ form_label(form.name) }}
+    {{ form_widget(form.name, {'attr': {'class': 'form-control'}}) }}
+    {{ form_errors(form.name) }}
+  </div>
+
+  <div class="mb-3">
+    {{ form_label(form.email) }}
+    {{ form_widget(form.email, {'attr': {'class': 'form-control'}}) }}
+    {{ form_errors(form.email) }}
+  </div>
+
+  <div class="form-check mb-3">
+    {{ form_widget(form.admin, {'attr': {'class': 'form-check-input'}}) }}
+    {{ form_label(form.admin, null, {'label_attr': {'class': 'form-check-label'}}) }}
+    {{ form_errors(form.admin) }}
+  </div>
+
+  <button class="btn btn-primary">Enregistrer</button>
+{{ form_end(form) }}
 
 
 # templates/admin/base.html.twig
@@ -1318,20 +1534,28 @@ class RegistrationController extends AbstractController
 
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <title>{% block title %}PlantShop{% endblock %}</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="{{ asset('css/custom.css') }}">
-</head>
-<body class="bg-light">
-  {% include 'partials/_navbar.html.twig' %}
-  <main class="container my-4">
-    {% include 'partials/_flash.html.twig' %}
-    {% block body %}{% endblock %}
-  </main>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-</body>
+	<head>
+		<meta charset="UTF-8">
+		<title>
+			{% block title %}PlantShop
+			{% endblock %}
+		</title>
+		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+		<link
+		rel="stylesheet" href="{{ asset('css/custom.css') }}">
+	{# Votre CSS personnalisé #}
+	</head>
+	<body class="bg-light">
+		{% include 'partials/_navbar.html.twig' %}
+		<main class="container my-4">
+			{% include 'partials/_flash.html.twig' %}
+			{% block body %}{% endblock %}
+		</main>
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+		<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+		<script src="{{ asset('js/cart.js') }}"></script>
+	</body>
 </html>
 
 
@@ -1656,6 +1880,260 @@ class RegistrationController extends AbstractController
 {% endfor %}
 
 
+# public/js/cart.js
+
+/**
+ * Gestionnaire de panier pour l'application PlantShop.
+ *
+ * Ce fichier contient la classe `Cart`, qui gère toutes les interactions liées au panier :
+ * - Ajout, suppression, et mise à jour des produits.
+ * - Sauvegarde des données dans `localStorage`.
+ * - Affichage du panier dans la barre de navigation et dans les pages dédiées.
+ *
+ * Dépendances :
+ * - Axios (pour les requêtes HTTP si nécessaire).
+ * - DOM API pour manipuler les éléments HTML.
+ *
+ * @class Cart
+ * @author VotreNom
+ * @version 1.0
+ */
+class Cart {
+  /**
+   * Récupère le contenu du panier depuis `localStorage`.
+   *
+   * @returns {Object} Contenu du panier sous forme d'objet JSON.
+   * @example
+   * const cart = new Cart();
+   * const contenu = cart.get();
+   */
+  get() {
+    try {
+      return JSON.parse(localStorage.getItem("cart") || "{}");
+    } catch (e) {
+      console.error("Erreur JSON", e);
+      return {};
+    }
+  }
+
+  /**
+   * Sauvegarde le panier dans `localStorage`.
+   *
+   * @param {Object} cart Contenu du panier à sauvegarder.
+   * @example
+   * const cart = new Cart();
+   * cart.save({ 1: { id: 1, name: "Plante", price: 10, quantity: 2 } });
+   */
+  save(cart) {
+    localStorage.setItem("cart", JSON.stringify(cart));
+  }
+
+  /**
+   * Ajoute un produit au panier.
+   *
+   * @param {number} id Identifiant unique du produit.
+   * @param {string} name Nom du produit.
+   * @param {number} price Prix unitaire du produit.
+   * @param {number} stock Quantité disponible en stock.
+   * @example
+   * const cart = new Cart();
+   * cart.add(1, "Plante Verte", 12.99, 10);
+   */
+  add(id, name, price, stock) {
+    const cart = this.get();
+    if (cart[id]) {
+      cart[id].quantity += 1;
+    } else {
+      cart[id] = { id, name, price, quantity: 1, stock };
+    }
+    this.save(cart);
+    this.updateNavbarCount();
+  }
+
+  /**
+   * Met à jour la quantité d'un produit dans le panier.
+   *
+   * @param {number} id Identifiant unique du produit.
+   * @param {number|string} newQty Nouvelle quantité cible.
+   * @example
+   * const cart = new Cart();
+   * cart.update(1, 5);
+   */
+  update(id, newQty) {
+    const qty = parseInt(newQty);
+    if (isNaN(qty)) return;
+
+    const cart = this.get();
+    if (!cart[id]) return;
+
+    const input = document.querySelector(`input[data-cart-id="${id}"]`);
+    const stock = parseInt(input?.dataset?.stock) || 1;
+
+    let correctedQty = Math.max(1, Math.min(qty, stock));
+    cart[id].quantity = correctedQty;
+    if (input) input.value = correctedQty;
+
+    this.save(cart);
+    this.render();
+  }
+
+  /**
+   * Met à jour la quantité avec un délai (utilisé pour les champs de saisie).
+   *
+   * @param {number} id Identifiant unique du produit.
+   * @param {HTMLInputElement} inputElem Champ de saisie correspondant au produit.
+   * @example
+   * const input = document.querySelector('input[data-cart-id="1"]');
+   * cart.delayedUpdate(1, input);
+   */
+  delayedUpdate(id, inputElem) {
+    clearTimeout(inputElem._cartTimer);
+    inputElem._cartTimer = setTimeout(() => {
+      this.update(id, inputElem.value);
+    }, 300);
+  }
+
+  /**
+   * Supprime un produit du panier.
+   *
+   * @param {number} id Identifiant unique du produit.
+   * @example
+   * const cart = new Cart();
+   * cart.remove(1);
+   */
+  remove(id) {
+    const cart = this.get();
+    delete cart[id];
+    this.save(cart);
+    this.render();
+  }
+
+  /**
+   * Vide complètement le panier.
+   *
+   * @example
+   * const cart = new Cart();
+   * cart.clear();
+   */
+  clear() {
+    localStorage.removeItem("cart");
+    this.render();
+  }
+
+  /**
+   * Met à jour le compteur d'articles dans la barre de navigation.
+   *
+   * @example
+   * const cart = new Cart();
+   * cart.updateNavbarCount();
+   */
+  updateNavbarCount() {
+    const cart = this.get();
+    const count = Object.values(cart).reduce((sum, item) => sum + item.quantity, 0);
+    const link = document.getElementById("cart-link");
+    if (link) {
+      link.innerText = `Mon Panier${count > 0 ? ` (${count})` : ""}`;
+    }
+  }
+
+  /**
+   * Affiche le contenu complet du panier dans le conteneur HTML.
+   *
+   * @example
+   * const cart = new Cart();
+   * cart.render();
+   */
+  render() {
+    const container = document.getElementById("cart-container");
+    if (!container) return;
+
+    const cart = this.get();
+    container.innerHTML = "";
+
+    this.updateNavbarCount();
+
+    if (Object.keys(cart).length === 0) {
+      const alert = document.createElement("p");
+      alert.className = "alert alert-info";
+      alert.textContent = "Votre panier est vide.";
+      container.appendChild(alert);
+      return;
+    }
+
+    const table = document.createElement("table");
+    table.className = "table";
+
+    const thead = document.createElement("thead");
+    thead.className = "table-dark";
+    const headerRow = document.createElement("tr");
+    ["Plante", "Quantité", "Action"].forEach(text => {
+      const th = document.createElement("th");
+      th.textContent = text;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    let total = 0;
+
+    for (const id in cart) {
+      const item = cart[id];
+      total += item.price * item.quantity;
+
+      const row = document.createElement("tr");
+
+      const tdName = document.createElement("td");
+      const link = document.createElement("a");
+      link.href = `/plantes/${id}`;
+      link.className = "text-decoration-none";
+      link.textContent = item.name;
+      tdName.appendChild(link);
+
+      const tdQty = document.createElement("td");
+      const input = document.createElement("input");
+      input.type = "number";
+      input.min = "1";
+      input.className = "form-control form-control-sm";
+      input.style.maxWidth = "70px";
+      input.value = item.quantity;
+      input.dataset.cartId = id;
+      input.dataset.stock = item.stock;
+      input.oninput = () => this.delayedUpdate(id, input);
+      tdQty.appendChild(input);
+
+      const tdAction = document.createElement("td");
+      const btn = document.createElement("button");
+      btn.className = "btn btn-danger btn-sm";
+      btn.textContent = "Retirer";
+      btn.onclick = () => this.remove(id);
+      tdAction.appendChild(btn);
+
+      row.appendChild(tdName);
+      row.appendChild(tdQty);
+      row.appendChild(tdAction);
+      tbody.appendChild(row);
+    }
+
+    table.appendChild(tbody);
+    container.appendChild(table);
+
+    const totalEl = document.createElement("p");
+    totalEl.className = "text-end fw-bold";
+    totalEl.textContent = `Total : ${total} €`;
+    container.appendChild(totalEl);
+  }
+}
+
+// Initialisation
+window.Cart = new Cart();
+
+document.addEventListener("DOMContentLoaded", () => {
+  window.Cart.updateNavbarCount();
+  window.Cart.render();
+});
+
+
 # public/css/custom.css
 
 .navbar-custom {
@@ -1723,6 +2201,8 @@ class RegistrationController extends AbstractController
 │   ├── objects/
 │   │   ├── 01/
 │   │   │   └── c2a64bc828fdb49d884f52ee7a6f684bbedef0
+│   │   ├── 03/
+│   │   │   └── 5de27b7ab2e0afda4a424291aa37e3a81c3534
 │   │   ├── 04/
 │   │   │   └── 9d24ed966cf7b18fcfb5e60e0934599601f7ce
 │   │   ├── 06/
@@ -1732,6 +2212,8 @@ class RegistrationController extends AbstractController
 │   │   │   └── b1737a88f31854c74ae46f41c34c146d3b2ca4
 │   │   ├── 0a/
 │   │   │   └── 49f9543f95bf5a53985e4f4e6de21086bc5b7a
+│   │   ├── 0c/
+│   │   │   └── 6e0decbd50ea7b2e760f681e8a8ab34f26724d
 │   │   ├── 0f/
 │   │   │   ├── 5f6bc3619fe0f21e8f42dde566fb75329393ee
 │   │   │   ├── c74bbac4b757dd49782f0be496f6fd7e07e47c
@@ -1743,19 +2225,29 @@ class RegistrationController extends AbstractController
 │   │   ├── 13/
 │   │   │   └── 2eb78090b484991c22c6feb7b786c6a24e6dbb
 │   │   ├── 18/
+│   │   │   ├── 2b8ed21060be17f6e4090de0327cb58c0d588b
 │   │   │   └── 4c95e292ac6ba4d02a0abc24bab0e5fa89a2ec
+│   │   ├── 1a/
+│   │   │   └── 040392873171720d08c584c194c4c85073ffdc
+│   │   ├── 1b/
+│   │   │   └── d1fefd9f61dfa9da9f4b7040c71a97ce617a45
 │   │   ├── 1d/
 │   │   │   └── 5e23bb76b1fa9dc92f047bd4b10a7848c27514
 │   │   ├── 20/
 │   │   │   └── b9b7d957f4fb4d755110c9e28477da6f4d63e7
 │   │   ├── 21/
 │   │   │   └── 33610be8a857e33e4aa920880b148026a01085
+│   │   ├── 22/
+│   │   │   └── ba1092f386474e7f7a0044701c867e6809cd92
 │   │   ├── 23/
 │   │   │   └── 9219f38ab4dfe0077912402b1b37955955d486
 │   │   ├── 24/
 │   │   │   └── c96186799d8be6822cb5cc8433bd3cca645456
 │   │   ├── 25/
-│   │   │   └── 2e8e6fdc9f1ab4a2975e234968773f1428008e
+│   │   │   ├── 2e8e6fdc9f1ab4a2975e234968773f1428008e
+│   │   │   └── a2dfe19e53d688af6cb9a1b5efcdc08c6734a4
+│   │   ├── 27/
+│   │   │   └── 57a8bf52fff502663ce9859509a210ce2b1018
 │   │   ├── 29/
 │   │   │   └── 231d94bd1afd6f35b3c1e64687640d3f1e2f50
 │   │   ├── 2a/
@@ -1765,6 +2257,8 @@ class RegistrationController extends AbstractController
 │   │   │   └── e194ffe7ac74f32329d59f46a5f7b6014fd9c8
 │   │   ├── 2d/
 │   │   │   └── 6a76f94dce138741e2d63ae83a11c1879031d9
+│   │   ├── 2f/
+│   │   │   └── 21c45aa9354f281734d0d757293cbb0b275730
 │   │   ├── 31/
 │   │   │   ├── 0ed68e5f65d31f032d1d7340713466db9a6946
 │   │   │   └── ec5da468a00a5dd7fe78e01f2b335d5cf2267b
@@ -1775,10 +2269,12 @@ class RegistrationController extends AbstractController
 │   │   ├── 34/
 │   │   │   └── ce750428aa4975a81acc1b0fec57b6fe44a4ca
 │   │   ├── 36/
-│   │   │   └── 7af25a56d2decba5041becc5770b16c91b60d4
+│   │   │   ├── 7af25a56d2decba5041becc5770b16c91b60d4
+│   │   │   └── dac4d733793371464abd8181707b66ef002d5e
 │   │   ├── 37/
 │   │   │   └── 996185abc34a33c6badfcd4ebd402756c57933
 │   │   ├── 3b/
+│   │   │   ├── 992d5ed392d11a6d51a7c92b1dd01b570dc32d
 │   │   │   └── 9eb8e667bfc27f5389a06ba631be41416c65ca
 │   │   ├── 3c/
 │   │   │   └── e538359351351fa6b50885cdbbee1a23aaa32a
@@ -1790,26 +2286,35 @@ class RegistrationController extends AbstractController
 │   │   ├── 40/
 │   │   │   └── d40405e1e9651723b0169bac8f1a36489021ea
 │   │   ├── 41/
+│   │   │   ├── 8f2de10328c15398c025f43f7afdb73471ba5c
 │   │   │   └── ef8140ba811c0da46ce1962ffa50d4c56b9840
 │   │   ├── 43/
 │   │   │   └── 892bba7fab8ceb23025dc201d1a8cbb9e026f6
 │   │   ├── 44/
 │   │   │   └── 277629cd6b0bbb5192b68db86f0036a8fda5e2
+│   │   ├── 46/
+│   │   │   └── 44127bac354e10fa5c2fba373db6001f59c7dc
 │   │   ├── 4e/
 │   │   │   └── efe1537cefc8499226365c0483b0f534ad7022
 │   │   ├── 51/
 │   │   │   └── 76582e5f184cfcee87a658166392dd1c0da654
+│   │   ├── 53/
+│   │   │   └── e979685370923798d3da25456413313cba5288
 │   │   ├── 56/
 │   │   │   └── 320321b47e1cae83f87efc50366fa763d53a14
 │   │   ├── 5b/
 │   │   │   └── f85ee24ec8a16d402406e9a1b92a8e34bda70e
+│   │   ├── 5d/
+│   │   │   └── f021e3c3703ed6ca92c9bda6fcec77c5bf29b7
 │   │   ├── 5e/
 │   │   │   └── bcdb2153c870e7d915f3b3fcdd55821424284c
 │   │   ├── 63/
 │   │   │   └── 028d770140ecd887ff512f8bb11dc9d0f48d51
 │   │   ├── 64/
-│   │   │   └── 30f15e81e214e308e21a8dc3fe3c2464113693
+│   │   │   ├── 30f15e81e214e308e21a8dc3fe3c2464113693
+│   │   │   └── b6b13d333c7e3a19702b2761c8051b4c699a77
 │   │   ├── 65/
+│   │   │   ├── 0a9470e90986d869b3d2b545da8b70721ec14e
 │   │   │   └── 7af7e6da4de3ee7faf059b280f7344359b86a3
 │   │   ├── 68/
 │   │   │   └── 99b72003fca67f5a56b945cd3e07f5c8a33774
@@ -1824,6 +2329,7 @@ class RegistrationController extends AbstractController
 │   │   ├── 71/
 │   │   │   └── c583cfa0fbda37e91a08628fbe818c5fc18ef5
 │   │   ├── 72/
+│   │   │   ├── 06bb31e3ff306b255ef337da88ebe0588ad309
 │   │   │   └── a0682dc0751620910e8a44eea77d96dec8235a
 │   │   ├── 74/
 │   │   │   └── 1fee830f7691c7090008eddeba68cb20c86a77
@@ -1854,27 +2360,37 @@ class RegistrationController extends AbstractController
 │   │   ├── 8a/
 │   │   │   └── c1b1e27677dd760ced5d8176dd19faf7d40a40
 │   │   ├── 8b/
+│   │   │   ├── 4c212d3d3d49efcf5c66a8c53fadfeae4d9c1d
 │   │   │   └── d9061d53c8d3913bbb31cc42a41726e128492f
 │   │   ├── 8c/
 │   │   │   └── 7b0fd156142d85d759d7c60e11b896c4e6dbad
 │   │   ├── 91/
+│   │   │   ├── 70a4105a0c6f0dd9d8f585d35360848073dbaa
 │   │   │   └── 91abbfb1b35a1c9ccdef722e2edf853e960963
 │   │   ├── 95/
 │   │   │   └── 59ceee35b522b1fc000f53d380026d1e5a76d9
+│   │   ├── 96/
+│   │   │   └── 5055903137140d354a4f037a244c2434ff1b3b
 │   │   ├── 97/
+│   │   │   ├── 2cd3ef1d13a2394665228407233d90ff78ce3d
+│   │   │   ├── 3c2c5124725591980da7b1ef9a056397379059
 │   │   │   ├── c425c7108dc4ff3793cb8c5e24eda290b4ae61
 │   │   │   └── f32c9af11dbd7811bd035c0bf451ceebd546ed
 │   │   ├── 99/
-│   │   │   └── 82c218d6969c72d4c91e3834e3f535e2dfe68b
+│   │   │   ├── 5151b50e92d887c6d14507f5063aa505becd9d
+│   │   │   ├── 82c218d6969c72d4c91e3834e3f535e2dfe68b
+│   │   │   └── e5a333ca0b8b9e3b372201cfbd03a03d94ee0e
 │   │   ├── 9a/
 │   │   │   └── 153b40e933861fb75827584204a77390e92f97
 │   │   ├── 9b/
-│   │   │   └── 31df15d1118c2983fb6b1c276e38b276024411
+│   │   │   ├── 31df15d1118c2983fb6b1c276e38b276024411
+│   │   │   └── 3918fc99eaa34441409864972af2b4fdab39fb
 │   │   ├── 9e/
 │   │   │   └── 8cd00d6a34b1fdf4ce022bcfa061cd0576a41c
 │   │   ├── a2/
 │   │   │   ├── 0c05ed6d79e0c623691707c566fdddb247f8bd
-│   │   │   └── 9bf223c0f59d2cbb1469cf2e618f4bfb83f05d
+│   │   │   ├── 9bf223c0f59d2cbb1469cf2e618f4bfb83f05d
+│   │   │   └── bb53f0394443aed16657129f8940221b90bdfb
 │   │   ├── a3/
 │   │   │   └── 05517c219d1ea74814a4ae6da22badd6c67b7d
 │   │   ├── a4/
@@ -1884,7 +2400,12 @@ class RegistrationController extends AbstractController
 │   │   ├── a6/
 │   │   │   └── 7f91e25c268247e2034877873a2b27f37619f0
 │   │   ├── aa/
-│   │   │   └── 63e47f3d6e4628c8d8179272e102c7d3bdc063
+│   │   │   ├── 63e47f3d6e4628c8d8179272e102c7d3bdc063
+│   │   │   └── f57de1ed423ef6a54322c3e4a6dcbcad04fcbe
+│   │   ├── ab/
+│   │   │   └── 1a6379122e3fa1b504be6704d8fd22491a2872
+│   │   ├── ad/
+│   │   │   └── d9969ca33df1ba0be2d6a47e3a011349772cfa
 │   │   ├── af/
 │   │   │   └── 66555245d695b82100761cf66c9a122fd63dd7
 │   │   ├── b0/
@@ -1893,20 +2414,32 @@ class RegistrationController extends AbstractController
 │   │   ├── b1/
 │   │   │   └── 3d193172204ccc9302be95e9f73b47a585fa1a
 │   │   ├── b2/
+│   │   │   ├── 51d54fddad9edd4b0bb75c866a23c6fea36f2d
 │   │   │   └── 9153bdebc8c935907c000813740c61a20275d8
+│   │   ├── b4/
+│   │   │   └── 1241ecc1cb4b39b6204aef79a2ae1314107e3f
 │   │   ├── b6/
 │   │   │   └── 26900bde0e0ce1e476235ca845695730fe7968
+│   │   ├── b7/
+│   │   │   └── 59e370c3d4633a93011e90597ef6a3ffdadc32
 │   │   ├── ba/
 │   │   │   ├── 811479186d5a21612698e4d7546e6406fe31c9
 │   │   │   └── ad5689e8458ab3bb94465453c410a6928dd9c9
+│   │   ├── bb/
+│   │   │   └── 095261620a1b567b40ccd35aebb164c9933a6f
 │   │   ├── bc/
 │   │   │   └── 5bcfcfdcda26c45ca11ba675f854276d19548c
+│   │   ├── c1/
+│   │   │   └── ce59cf5841aaca1e612458acf78d7b99526d17
 │   │   ├── c5/
 │   │   │   └── 612b0ad1957ade3aeb03176f49da20cda51469
 │   │   ├── c7/
 │   │   │   └── 7d36281e10b2af45acba498d96bae652707cc0
+│   │   ├── c8/
+│   │   │   └── b7d690b200ecc8179c1e9663379247a201d43b
 │   │   ├── cc/
-│   │   │   └── 114d5db2f408cca98550260c9c33d237d90706
+│   │   │   ├── 114d5db2f408cca98550260c9c33d237d90706
+│   │   │   └── 8ce421f436a5337dee32d42b92118ec5fa13fd
 │   │   ├── ce/
 │   │   │   └── 23fe0649bdb8a71de4ca785195771949f9cc89
 │   │   ├── d0/
@@ -1915,30 +2448,43 @@ class RegistrationController extends AbstractController
 │   │   │   └── 2c52d6d2573bc94f3423d8f6d63a8eac3b61d8
 │   │   ├── d5/
 │   │   │   └── d2f9ec0ce45209e9be89e5aa447745656607e1
+│   │   ├── d6/
+│   │   │   └── 6f22415ba3b6c1576d31232ecc70b0e3968076
 │   │   ├── d8/
 │   │   │   ├── c63d7a759288fff327f60ca1e2933aca9a96d8
 │   │   │   └── d530e2c36a68f7916acdfa16c9afafcad06bf0
 │   │   ├── dd/
 │   │   │   ├── 3575773fca950f93429a5f25c62f6e92bb0e95
 │   │   │   ├── 47a6ad82a8ecc3adc7dd22262ebe27b4b10534
+│   │   │   ├── 704226ef776543bb9f8bd357ac5613c18b13cb
 │   │   │   ├── 91fbf7439e7fef49a2cb4d917235c6fb550052
 │   │   │   ├── ced4fd693d1f6ecfaeb32f0f6b9c3507753ccb
 │   │   │   └── eca5a267bc4f47d5e1a7cd8bd15694f956cddf
 │   │   ├── e6/
 │   │   │   └── 9de29bb2d1d6434b8b29ae775ad8c2e48c5391
+│   │   ├── eb/
+│   │   │   └── 13d2a8358189e71c79a8630b430556f694973c
 │   │   ├── ed/
 │   │   │   └── 2fe51e29ee4768228d56ce2cbc9c466a7c7909
 │   │   ├── f0/
 │   │   │   └── 337a699d16460f8c5fbf48925d61aa13261f4c
 │   │   ├── f1/
+│   │   │   ├── 7ca5831f247f1bc2ffda73a6772aa78b0b9000
 │   │   │   └── ec7e9752d5d5c00f09f220d756c9c7847b6697
+│   │   ├── f3/
+│   │   │   └── 20cbd3ca320003afef7235734d8b525a608113
 │   │   ├── f6/
 │   │   │   ├── 3651e5b48615e01c9c27c9f4cc2a0dd069e62e
-│   │   │   └── 39cea99d64e1a14ea3d9f6b5d82d714234045b
+│   │   │   ├── 39cea99d64e1a14ea3d9f6b5d82d714234045b
+│   │   │   └── 4654376639f2d3739f092ce6b5473ae4d1b417
 │   │   ├── f8/
 │   │   │   └── 53be15cf348ec1b6caaff738de0153eb9eeef0
+│   │   ├── fa/
+│   │   │   └── 7595bcd614d32ad3e8c4a367afff48ca11e343
 │   │   ├── fd/
 │   │   │   └── e145056a3be33f3a67aaf0ab93f5a86c7fc7e2
+│   │   ├── fe/
+│   │   │   └── f7e7b8e4e446a146ddd134bd4bcd6a08641040
 │   │   ├── info/
 │   │   └── pack/
 │   └── refs/
@@ -1951,12 +2497,13 @@ class RegistrationController extends AbstractController
 │   ├── Version20250512104230.php
 │   ├── Version20250512104438.php
 │   └── Version20250512105354.php
-├── projet_symfony.txt
 ├── projet.txt
 ├── public/
 │   ├── css/
 │   │   └── custom.css
-│   └── index.php
+│   ├── index.php
+│   └── js/
+│       └── cart.js
 ├── src/
 │   ├── Command/
 │   │   └── VuesExistenceCheckCommand.php
@@ -1976,7 +2523,9 @@ class RegistrationController extends AbstractController
 │   │   ├── Plant.php
 │   │   └── User.php
 │   ├── Form/
-│   │   └── RegistrationForm.php
+│   │   ├── PlanteType.php
+│   │   ├── RegistrationForm.php
+│   │   └── UserType.php
 │   ├── Kernel.php
 │   ├── Repository/
 │   │   ├── .gitignore
@@ -1996,6 +2545,7 @@ class RegistrationController extends AbstractController
     │   │   ├── new.html.twig
     │   │   └── show.html.twig
     │   └── utilisateur/
+    │       ├── _form.html.twig
     │       ├── index.html.twig
     │       └── show.html.twig
     ├── base.html.twig
@@ -2022,4 +2572,4 @@ class RegistrationController extends AbstractController
     └── utilisateur/
         └── index.html.twig
 
-142 directories, 216 files
+166 directories, 264 files
