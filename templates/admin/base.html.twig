@@ -11,17 +11,17 @@
 
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
-      <a class="navbar-brand" href="{{ path('admin_home') }}">🌿 Admin PlantShop</a>
+      <a class="navbar-brand" href="{{ path('admin_plantes_index') }}">🌿 PlantShop</a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ms-auto">
           <li class="nav-item">
-            <a class="nav-link" href="{{ path('admin_users_index') }}">Utilisateurs</a>
+            <a class="nav-link" href="{{ path('admin_utilisateurs_index') }}">Utilisateurs</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="{{ path('admin_plants_index') }}">Plantes</a>
+            <a class="nav-link" href="{{ path('admin_plantes_index') }}">Plantes</a>
           </li>
           <li class="nav-item">
             <form method="POST" action="{{ path('app_logout') }}" class="d-inline">

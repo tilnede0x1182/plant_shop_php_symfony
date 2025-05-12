@@ -21,7 +21,7 @@ class CommandeController extends AbstractController
 		$utilisateur = $this->getUser();
 		$commandes = $utilisateur->getCommandes();
 
-		return $this->render('commande/index.html.twig', ['commandes' => $commandes]);
+		return $this->render('commande/index.html.twig', ['orders' => $commandes]);
 	}
 
 	#[Route('/commandes/nouvelle', name: 'commande_creer')]

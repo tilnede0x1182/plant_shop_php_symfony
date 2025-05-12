@@ -43,6 +43,14 @@ class UtilisateurController extends AbstractController
 		]);
 	}
 
+	#[Route('/{id}', name: 'admin_users_show', methods: ['GET'])]
+	public function show(User $user): Response
+	{
+		return $this->render('admin/utilisateur/show.html.twig', [
+			'user' => $user
+		]);
+	}
+
 	#[Route('/{id}/modifier', name: 'admin_users_edit')]
 	public function edit(User $user, Request $request, EntityManagerInterface $em, UserPasswordHasherInterface $hasher): Response
 	{
@@ -67,7 +75,7 @@ class UtilisateurController extends AbstractController
 	#[Route('/{id}/supprimer', name: 'admin_users_delete', methods: ['POST'])]
 	public function delete(Request $request, User $user, EntityManagerInterface $em): Response
 	{
-		if ($this->isCsrfTokenValid('delete'.$user->getId(), $request->request->get('_token'))) {
+		if ($this->isCsrfTokenValid('delete' . $user->getId(), $request->request->get('_token'))) {
 			$em->remove($user);
 			$em->flush();
 		}

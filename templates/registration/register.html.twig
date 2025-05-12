@@ -11,24 +11,22 @@
     <div class="mb-3">
       {{ form_label(registerForm.name) }}
       {{ form_widget(registerForm.name, {'attr': {'class': 'form-control'}}) }}
+      {{ form_errors(registerForm.name) }}
     </div>
 
     <div class="mb-3">
       {{ form_label(registerForm.email) }}
       {{ form_widget(registerForm.email, {'attr': {'class': 'form-control'}}) }}
+      {{ form_errors(registerForm.email) }}
     </div>
 
     <div class="mb-3">
-      {{ form_label(registerForm.password) }}
-      {{ form_widget(registerForm.password, {'attr': {'class': 'form-control'}}) }}
+      {{ form_label(registerForm.plainPassword) }}
+      {{ form_widget(registerForm.plainPassword, {'attr': {'class': 'form-control'}}) }}
+      {{ form_errors(registerForm.plainPassword) }}
     </div>
 
-    <div class="mb-3">
-      {{ form_label(registerForm.password_confirm) }}
-      {{ form_widget(registerForm.password_confirm, {'attr': {'class': 'form-control'}}) }}
-    </div>
-
-    <button type="submit" class="btn btn-primary">S'inscrire</button>
+    <button type="submit" class="btn btn-success">S’inscrire</button>
 
     {{ form_end(registerForm) }}
   </form>

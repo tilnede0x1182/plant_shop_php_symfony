@@ -1,34 +1,25 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Se connecter{% endblock %}
+{% block title %}Connexion{% endblock %}
 
 {% block body %}
   <h1 class="text-center mb-4">Connexion</h1>
 
+  {% if error %}
+    <div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
+  {% endif %}
+
   <form method="POST" action="{{ path('app_login') }}" class="w-100" style="max-width: 500px;">
-    {{ form_start(loginForm) }}
-
     <div class="mb-3">
-      {{ form_label(loginForm.email) }}
-      {{ form_widget(loginForm.email, {'attr': {'class': 'form-control'}}) }}
+      <label for="email" class="form-label">Email</label>
+      <input type="email" name="email" id="email" class="form-control" value="{{ last_username }}">
     </div>
 
     <div class="mb-3">
-      {{ form_label(loginForm.password) }}
-      {{ form_widget(loginForm.password, {'attr': {'class': 'form-control'}}) }}
+      <label for="password" class="form-label">Mot de passe</label>
+      <input type="password" name="password" id="password" class="form-control">
     </div>
 
-    <div class="mb-3 form-check">
-      <label class="form-check-label">
-        {{ form_widget(loginForm.rememberMe) }} Se souvenir de moi
-      </label>
-    </div>
-
-    <div class="d-flex justify-content-between">
-      <button type="submit" class="btn btn-primary">Se connecter</button>
-      <a href="{{ path('app_register') }}" class="btn btn-link">S'inscrire</a>
-    </div>
-
-    {{ form_end(loginForm) }}
+    <button type="submit" class="btn btn-primary w-100">Se connecter</button>
   </form>
 {% endblock %}
