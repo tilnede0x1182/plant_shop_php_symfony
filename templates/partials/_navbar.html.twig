@@ -1,35 +1,54 @@
-<nav class="navbar navbar-expand-lg navbar-dark navbar-custom rounded-3 px-3 mb-4">
+<nav class="navbar navbar-expand-lg navbar-dark rounded-3 navbar-custom px-3">
   <a class="navbar-brand fw-bold text-white" href="{{ path('accueil') }}">🌿 PlantShop</a>
-  <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navBar"><span class="navbar-toggler-icon"></span></button>
+  <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navBar">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
   <div class="collapse navbar-collapse" id="navBar">
     <ul class="navbar-nav ms-auto">
       {% if app.user %}
         <li class="nav-item d-flex align-items-center text-white px-2 text-capitalize">
           {{ app.user.name }}{% if app.user.admin %} (Administrateur){% endif %}
         </li>
-        <li class="nav-item"><a class="nav-link" id="cart-link" href="{{ path('panier_index') }}">Mon Panier</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ path('commandes_index') }}">Mes commandes</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ path('utilisateur_afficher', {id: app.user.id}) }}">Profil</a></li>
+      {% endif %}
+
+      <li class="nav-item">
+        <a class="nav-link" id="cart-link" href="{{ path('panier_index') }}">Mon Panier</a>
+      </li>
+
+      {% if app.user %}
+        <li class="nav-item">
+          <a class="nav-link" href="{{ path('commandes_index') }}">Mes commandes</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ path('utilisateur_afficher', {id: app.user.id}) }}">Profil</a>
+        </li>
+
         {% if app.user.admin %}
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">Admin</a>
             <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="{{ path('admin_plante_index') }}">Plantes</a></li>
+              <li><a class="dropdown-item" href="{{ path('admin_plantes_index') }}">Plantes</a></li>
               <li><a class="dropdown-item" href="{{ path('admin_utilisateurs_index') }}">Utilisateurs</a></li>
             </ul>
           </li>
         {% endif %}
+
         <li class="nav-item ms-2">
-          <form method="post" action="{{ path('app_logout') }}">
+          <form method="post" action="{{ path('app_logout') }}" class="d-inline">
             <input type="hidden" name="_token" value="{{ csrf_token('logout') }}">
-            <button type="submit" class="nav-link btn btn-link px-0 align-baseline text-white" style="text-decoration: none;">
+            <button type="submit" class="nav-link btn btn-link px-0 align-baseline" style="text-decoration: none;">
               Déconnexion
             </button>
           </form>
         </li>
       {% else %}
-        <li class="nav-item"><a class="nav-link" href="{{ path('app_register') }}">S’inscrire</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ path('app_login') }}">Se connecter</a></li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ path('app_register') }}">S’inscrire</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ path('app_login') }}">Se connecter</a>
+        </li>
       {% endif %}
     </ul>
   </div>
