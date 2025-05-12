@@ -1,0 +1,17 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Profil{% endblock %}
+
+{% block body %}
+  <h1 class="mb-4">Profil</h1>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title">{{ utilisateur.name }}</h5>
+      <p><strong>Email:</strong> {{ utilisateur.email }}</p>
+      <p><strong>Administrateur:</strong> {{ utilisateur.admin ? 'Oui' : 'Non' }}</p>
+
+      <a href="{{ path('utilisateur_modifier', { id: utilisateur.id }) }}" class="btn btn-danger">Modifier</a>
+    </div>
+  </div>
+{% endblock %}
