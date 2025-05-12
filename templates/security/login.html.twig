@@ -1,25 +1,27 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Connexion{% endblock %}
+{% block title %}Connexion
+{% endblock %}
 
 {% block body %}
-  <h1 class="text-center mb-4">Connexion</h1>
+	<h1 class="text-center mb-4">Connexion</h1>
 
-  {% if error %}
-    <div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
-  {% endif %}
+	{% if error %}
+		<div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
+	{% endif %}
 
-  <form method="POST" action="{{ path('app_login') }}" class="w-100" style="max-width: 500px;">
-    <div class="mb-3">
-      <label for="email" class="form-label">Email</label>
-      <input type="email" name="email" id="email" class="form-control" value="{{ last_username }}">
-    </div>
+	<form method="POST" action="{{ path('app_login') }}" class="w-100" style="max-width: 500px;">
+		<input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+		<div class="mb-3">
+			<label for="email" class="form-label">Email</label>
+			<input type="email" name="email" id="email" class="form-control" value="{{ last_username }}">
+		</div>
 
-    <div class="mb-3">
-      <label for="password" class="form-label">Mot de passe</label>
-      <input type="password" name="password" id="password" class="form-control">
-    </div>
+		<div class="mb-3">
+			<label for="password" class="form-label">Mot de passe</label>
+			<input type="password" name="password" id="password" class="form-control">
+		</div>
 
-    <button type="submit" class="btn btn-primary w-100">Se connecter</button>
-  </form>
+		<button type="submit" class="btn btn-primary w-100">Se connecter</button>
+	</form>
 {% endblock %}

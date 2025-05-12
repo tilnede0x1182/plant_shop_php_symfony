@@ -11,8 +11,6 @@
  * - DOM API pour manipuler les éléments HTML.
  *
  * @class Cart
- * @author VotreNom
- * @version 1.0
  */
 class Cart {
   /**

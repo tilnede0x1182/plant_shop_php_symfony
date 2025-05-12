@@ -37,20 +37,21 @@ class SeedDevCommand extends Command
 		$this->resetDatabase();
 		$users = $this->seedUsers($faker, $io);
 		$plants = $this->seedPlants($faker);
-		$this->seedOrders($faker, $users, $plants);
-
 		$this->em->flush();
 		$io->success('Base de données peuplée avec succès.');
+		$this->saveUserCredentialsFile($users);
 
 		return Command::SUCCESS;
 	}
 
 	private function resetDatabase(): void
 	{
-		$this->em->createQuery('DELETE FROM App\Entity\OrderItem oi')->execute();
-		$this->em->createQuery('DELETE FROM App\Entity\Order o')->execute();
-		$this->em->createQuery('DELETE FROM App\Entity\Plant p')->execute();
-		$this->em->createQuery('DELETE FROM App\Entity\User u')->execute();
+		$this->em->getConnection()->executeQuery('SET session_replication_role = replica');
+		$this->em->createQuery('DELETE FROM App\Entity\OrderItem')->execute();
+		$this->em->createQuery('DELETE FROM App\Entity\Order')->execute();
+		$this->em->createQuery('DELETE FROM App\Entity\Plant')->execute();
+		$this->em->createQuery('DELETE FROM App\Entity\User')->execute();
+		$this->em->getConnection()->executeQuery('SET session_replication_role = DEFAULT');
 	}
 
 	private function seedUsers(Generator $faker, SymfonyStyle $io): array
@@ -102,32 +103,22 @@ class SeedDevCommand extends Command
 		return $plants;
 	}
 
-	private function seedOrders(Generator $faker, array $users, array $plants): void
+	private function saveUserCredentialsFile(array $users): void
 	{
+		$content = "=== ADMINS ===\n";
 		foreach ($users as $user) {
-			$nbOrders = rand(1, 3);
-			for ($o = 0; $o < $nbOrders; $o++) {
-				$order = new Order();
-				$order->setUtilisateur($user);
-				$order->setStatus('confirmed');
-				$order->setCreatedAt($faker->dateTimeBetween('-6 months'));
-				$order->setUpdatedAt(new \DateTime());
-				$total = 0;
-
-				$items = $faker->randomElements($plants, rand(1, 5));
-				foreach ($items as $plant) {
-					$qty = rand(1, 3);
-					$orderItem = new OrderItem();
-					$orderItem->setCommande($order);
-					$orderItem->setPlante($plant);
-					$orderItem->setQuantity($qty);
-					$total += $plant->getPrice() * $qty;
-					$this->em->persist($orderItem);
-				}
-
-				$order->setTotalPrice($total);
-				$this->em->persist($order);
+			if ($user->isAdmin()) {
+				$content .= $user->getEmail() . " password\n";
 			}
 		}
+
+		$content .= "\n=== USERS ===\n";
+		foreach ($users as $user) {
+			if (!$user->isAdmin()) {
+				$content .= $user->getEmail() . " password\n";
+			}
+		}
+
+		file_put_contents(__DIR__ . '/../../users.txt', $content);
 	}
 }

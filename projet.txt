@@ -285,6 +285,7 @@ use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[UniqueEntity(fields: ['email'], message: 'There is already an account with this email')]
+#[ORM\Table(name: "users")]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
 	#[ORM\Id]
@@ -446,6 +447,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: OrderRepository::class)]
+#[ORM\Table(name: "orders")]
 class Order
 {
 	#[ORM\Id]
@@ -648,6 +650,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: PlantRepository::class)]
+#[ORM\Table(name: "plants")]
 class Plant
 {
 	#[ORM\Id]
@@ -769,22 +772,19 @@ class SecurityController extends AbstractController
     #[Route(path: '/login', name: 'app_login')]
     public function login(AuthenticationUtils $authenticationUtils): Response
     {
-        // if ($this->getUser()) {
-        //     return $this->redirectToRoute('target_path');
-        // }
-
-        // get the login error if there is one
         $error = $authenticationUtils->getLastAuthenticationError();
-        // last username entered by the user
         $lastUsername = $authenticationUtils->getLastUsername();
 
-        return $this->render('security/login.html.twig', ['last_username' => $lastUsername, 'error' => $error]);
+        return $this->render('security/login.html.twig', [
+            'last_username' => $lastUsername,
+            'error' => $error,
+        ]);
     }
 
     #[Route(path: '/logout', name: 'app_logout')]
     public function logout(): void
     {
-        throw new \LogicException('This method can be blank - it will be intercepted by the logout key on your firewall.');
+        throw new \LogicException('Intercepté par le firewall Symfony.');
     }
 }
 
@@ -815,7 +815,7 @@ class PanierController extends AbstractController
 
 namespace App\Controller\Admin;
 
-use App\Entity\Plante;
+use App\Entity\Plant;
 use App\Form\PlanteType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -829,7 +829,7 @@ class PlanteController extends AbstractController
 	#[Route('', name: 'admin_plantes_index')]
 	public function index(EntityManagerInterface $gestionnaire): Response
 	{
-		$plantes = $gestionnaire->getRepository(Plante::class)->findAll();
+		$plantes = $gestionnaire->getRepository(Plant::class)->findAll();
 		return $this->render('admin/plante/index.html.twig', ['plantes' => $plantes]);
 	}
 }
@@ -847,6 +847,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Annotation\Route;
 
 #[Route('/admin/utilisateurs')]
@@ -860,13 +861,17 @@ class UtilisateurController extends AbstractController
 	}
 
 	#[Route('/nouveau', name: 'admin_users_create')]
-	public function create(Request $request, EntityManagerInterface $em): Response
+	public function create(Request $request, EntityManagerInterface $em, UserPasswordHasherInterface $hasher): Response
 	{
 		$user = new User();
 		$form = $this->createForm(UserType::class, $user);
 		$form->handleRequest($request);
 
 		if ($form->isSubmitted() && $form->isValid()) {
+			$plainPassword = $form->get('plainPassword')->getData();
+			if ($plainPassword) {
+				$user->setPassword($hasher->hashPassword($user, $plainPassword));
+			}
 			$em->persist($user);
 			$em->flush();
 			return $this->redirectToRoute('admin_utilisateurs_index');
@@ -877,13 +882,25 @@ class UtilisateurController extends AbstractController
 		]);
 	}
 
+	#[Route('/{id}', name: 'admin_users_show', methods: ['GET'])]
+	public function show(User $user): Response
+	{
+		return $this->render('admin/utilisateur/show.html.twig', [
+			'user' => $user
+		]);
+	}
+
 	#[Route('/{id}/modifier', name: 'admin_users_edit')]
-	public function edit(User $user, Request $request, EntityManagerInterface $em): Response
+	public function edit(User $user, Request $request, EntityManagerInterface $em, UserPasswordHasherInterface $hasher): Response
 	{
 		$form = $this->createForm(UserType::class, $user);
 		$form->handleRequest($request);
 
 		if ($form->isSubmitted() && $form->isValid()) {
+			$plainPassword = $form->get('plainPassword')->getData();
+			if ($plainPassword) {
+				$user->setPassword($hasher->hashPassword($user, $plainPassword));
+			}
 			$em->flush();
 			return $this->redirectToRoute('admin_utilisateurs_index');
 		}
@@ -897,7 +914,7 @@ class UtilisateurController extends AbstractController
 	#[Route('/{id}/supprimer', name: 'admin_users_delete', methods: ['POST'])]
 	public function delete(Request $request, User $user, EntityManagerInterface $em): Response
 	{
-		if ($this->isCsrfTokenValid('delete'.$user->getId(), $request->request->get('_token'))) {
+		if ($this->isCsrfTokenValid('delete' . $user->getId(), $request->request->get('_token'))) {
 			$em->remove($user);
 			$em->flush();
 		}
@@ -912,7 +929,7 @@ class UtilisateurController extends AbstractController
 
 namespace App\Controller;
 
-use App\Entity\Plante;
+use App\Entity\Plant;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -923,12 +940,17 @@ class PlanteController extends AbstractController
 	#[Route('/', name: 'accueil')]
 	public function index(EntityManagerInterface $gestionnaire): Response
 	{
-		$plantes = $gestionnaire->getRepository(Plante::class)->findBy(['stock' => 0], ['name' => 'ASC']);
-		return $this->render('plante/index.html.twig', ['plantes' => $plantes]);
+		$plantes = $gestionnaire->getRepository(Plant::class)->createQueryBuilder('p')
+			->where('p.stock > 0')
+			->orderBy('p.name', 'ASC')
+			->getQuery()
+			->getResult();
+
+		return $this->render('plante/index.html.twig', ['plants' => $plantes]);
 	}
 
 	#[Route('/plantes/{id}', name: 'plante_afficher')]
-	public function show(Plante $plante): Response
+	public function show(Plant $plante): Response
 	{
 		return $this->render('plante/show.html.twig', ['plante' => $plante]);
 	}
@@ -990,7 +1012,7 @@ class CommandeController extends AbstractController
 		$utilisateur = $this->getUser();
 		$commandes = $utilisateur->getCommandes();
 
-		return $this->render('commande/index.html.twig', ['commandes' => $commandes]);
+		return $this->render('commande/index.html.twig', ['orders' => $commandes]);
 	}
 
 	#[Route('/commandes/nouvelle', name: 'commande_creer')]
@@ -1058,22 +1080,16 @@ class RegistrationController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var string $plainPassword */
             $plainPassword = $form->get('plainPassword')->getData();
-
-            // encode the plain password
             $user->setPassword($userPasswordHasher->hashPassword($user, $plainPassword));
-
             $entityManager->persist($user);
             $entityManager->flush();
-
-            // do anything else you need here, like send an email
 
             return $security->login($user, LoginFormAuthenticator::class, 'main');
         }
 
         return $this->render('registration/register.html.twig', [
-            'registrationForm' => $form,
+            'registerForm' => $form,
         ]);
     }
 }
@@ -1131,11 +1147,11 @@ namespace App\Form;
 
 use App\Entity\User;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-use Symfony\Component\Validator\Constraints\IsTrue;
 use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
 
@@ -1144,33 +1160,26 @@ class RegistrationForm extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('email')
-            ->add('agreeTerms', CheckboxType::class, [
-                'mapped' => false,
-                'constraints' => [
-                    new IsTrue([
-                        'message' => 'You should agree to our terms.',
-                    ]),
-                ],
+            ->add('name', TextType::class, [
+                'label' => 'Nom'
+            ])
+            ->add('email', EmailType::class, [
+                'label' => 'Email'
             ])
             ->add('plainPassword', PasswordType::class, [
-                // instead of being set onto the object directly,
-                // this is read and encoded in the controller
                 'mapped' => false,
                 'attr' => ['autocomplete' => 'new-password'],
                 'constraints' => [
                     new NotBlank([
-                        'message' => 'Please enter a password',
+                        'message' => 'Entrez un mot de passe',
                     ]),
                     new Length([
                         'min' => 6,
-                        'minMessage' => 'Your password should be at least {{ limit }} characters',
-                        // max length allowed by Symfony for security reasons
+                        'minMessage' => 'Mot de passe minimum : {{ limit }} caractères',
                         'max' => 4096,
                     ]),
                 ],
-            ])
-        ;
+            ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
@@ -1193,8 +1202,11 @@ use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\PasswordType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Validator\Constraints\Length;
+use Symfony\Component\Validator\Constraints\NotBlank;
 
 class UserType extends AbstractType
 {
@@ -1210,6 +1222,16 @@ class UserType extends AbstractType
 			->add('admin', CheckboxType::class, [
 				'label' => 'Administrateur',
 				'required' => false
+			])
+			->add('plainPassword', PasswordType::class, [
+				'mapped' => false,
+				'required' => false,
+				'label' => 'Mot de passe',
+				'attr' => ['autocomplete' => 'new-password'],
+				'constraints' => [
+					new NotBlank(['message' => 'Veuillez saisir un mot de passe']),
+					new Length(['min' => 6, 'minMessage' => 'Le mot de passe doit faire au moins {{ limit }} caractères'])
+				]
 			]);
 	}
 
@@ -1329,17 +1351,17 @@ class UserType extends AbstractType
 
   <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
-      <a class="navbar-brand" href="{{ path('admin_home') }}">🌿 Admin PlantShop</a>
+      <a class="navbar-brand" href="{{ path('admin_plantes_index') }}">🌿 PlantShop</a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ms-auto">
           <li class="nav-item">
-            <a class="nav-link" href="{{ path('admin_users_index') }}">Utilisateurs</a>
+            <a class="nav-link" href="{{ path('admin_utilisateurs_index') }}">Utilisateurs</a>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="{{ path('admin_plants_index') }}">Plantes</a>
+            <a class="nav-link" href="{{ path('admin_plantes_index') }}">Plantes</a>
           </li>
           <li class="nav-item">
             <form method="POST" action="{{ path('app_logout') }}" class="d-inline">
@@ -1541,8 +1563,7 @@ class UserType extends AbstractType
 			{% endblock %}
 		</title>
 		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-		<link
-		rel="stylesheet" href="{{ asset('css/custom.css') }}">
+		<link rel="stylesheet" href="/css/custom.css">
 	{# Votre CSS personnalisé #}
 	</head>
 	<body class="bg-light">
@@ -1554,7 +1575,7 @@ class UserType extends AbstractType
 		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 		<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-		<script src="{{ asset('js/cart.js') }}"></script>
+		<script src="/js/cart.js"></script>
 	</body>
 </html>
 
@@ -1630,22 +1651,29 @@ class UserType extends AbstractType
 
 {% extends 'base.html.twig' %}
 
-{% block title %}Détails de la Plante{% endblock %}
+{% block title %}{{ plante.name }}{% endblock %}
 
 {% block body %}
   <div class="card shadow-lg rounded-3">
     <div class="card-body">
-      <h1 class="card-title">{{ plant.name }}</h1>
-      <p><strong>Prix :</strong> {{ plant.price }} €</p>
-      <p><strong>Description :</strong> {{ plant.description }}</p>
+      <h1 class="card-title">{{ plante.name }}</h1>
+
+      <p><strong>Prix :</strong> {{ plante.price }} €</p>
+
+      {% if plante.description %}
+        <p><strong>Description :</strong> {{ plante.description }}</p>
+      {% endif %}
+
+      <p><strong>Stock :</strong> {{ plante.stock }}</p>
 
       <div class="d-flex gap-2 flex-wrap mb-3">
         <button class="btn btn-success rounded-3"
-          onclick="Cart.add({{ plant.id }}, '{{ addslashes(plant.name) }}', {{ plant.price }})">Ajouter au
-          panier</button>
+                onclick="Cart.add({{ plante.id }}, '{{ plante.name|e('js') }}', {{ plante.price }}, {{ plante.stock }})">
+          Ajouter au panier
+        </button>
       </div>
 
-      <a class="btn btn-secondary rounded-3" href="{{ path('plants_index') }}">Retour</a>
+      <a class="btn btn-secondary rounded-3" href="{{ path('accueil') }}">Retour</a>
     </div>
   </div>
 {% endblock %}
@@ -1670,7 +1698,7 @@ class UserType extends AbstractType
         <div class="card mb-4 shadow-sm">
           <div class="card-body">
             <h5 class="card-title">
-              <a class="text-decoration-none text-dark" href="{{ path('plante_show', {'id': plant.id}) }}">{{ plant.name }}</a>
+              <a class="text-decoration-none text-dark" href="{{ path('plante_afficher', {'id': plant.id}) }}">{{ plant.name }}</a>
             </h5>
             <p class="card-text">
               <strong>Prix :</strong> {{ plant.price }} €
@@ -1694,37 +1722,30 @@ class UserType extends AbstractType
 
 {% extends 'base.html.twig' %}
 
-{% block title %}Se connecter{% endblock %}
+{% block title %}Connexion
+{% endblock %}
 
 {% block body %}
-  <h1 class="text-center mb-4">Connexion</h1>
+	<h1 class="text-center mb-4">Connexion</h1>
 
-  <form method="POST" action="{{ path('app_login') }}" class="w-100" style="max-width: 500px;">
-    {{ form_start(loginForm) }}
+	{% if error %}
+		<div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
+	{% endif %}
 
-    <div class="mb-3">
-      {{ form_label(loginForm.email) }}
-      {{ form_widget(loginForm.email, {'attr': {'class': 'form-control'}}) }}
-    </div>
+	<form method="POST" action="{{ path('app_login') }}" class="w-100" style="max-width: 500px;">
+		<input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+		<div class="mb-3">
+			<label for="email" class="form-label">Email</label>
+			<input type="email" name="email" id="email" class="form-control" value="{{ last_username }}">
+		</div>
 
-    <div class="mb-3">
-      {{ form_label(loginForm.password) }}
-      {{ form_widget(loginForm.password, {'attr': {'class': 'form-control'}}) }}
-    </div>
+		<div class="mb-3">
+			<label for="password" class="form-label">Mot de passe</label>
+			<input type="password" name="password" id="password" class="form-control">
+		</div>
 
-    <div class="mb-3 form-check">
-      <label class="form-check-label">
-        {{ form_widget(loginForm.rememberMe) }} Se souvenir de moi
-      </label>
-    </div>
-
-    <div class="d-flex justify-content-between">
-      <button type="submit" class="btn btn-primary">Se connecter</button>
-      <a href="{{ path('app_register') }}" class="btn btn-link">S'inscrire</a>
-    </div>
-
-    {{ form_end(loginForm) }}
-  </form>
+		<button type="submit" class="btn btn-primary w-100">Se connecter</button>
+	</form>
 {% endblock %}
 
 
@@ -1785,7 +1806,7 @@ class UserType extends AbstractType
 
   <div class="d-flex justify-content-between mt-4">
     <button class="btn btn-outline-secondary" onclick="Cart.clear()">Vider le panier</button>
-    <a href="{{ path('orders_create') }}" class="btn btn-success">Passer la commande</a>
+    <a href="{{ path('commande_creer') }}" class="btn btn-success">Passer la commande</a>
   </div>
 {% endblock %}
 
@@ -1805,24 +1826,22 @@ class UserType extends AbstractType
     <div class="mb-3">
       {{ form_label(registerForm.name) }}
       {{ form_widget(registerForm.name, {'attr': {'class': 'form-control'}}) }}
+      {{ form_errors(registerForm.name) }}
     </div>
 
     <div class="mb-3">
       {{ form_label(registerForm.email) }}
       {{ form_widget(registerForm.email, {'attr': {'class': 'form-control'}}) }}
+      {{ form_errors(registerForm.email) }}
     </div>
 
     <div class="mb-3">
-      {{ form_label(registerForm.password) }}
-      {{ form_widget(registerForm.password, {'attr': {'class': 'form-control'}}) }}
+      {{ form_label(registerForm.plainPassword) }}
+      {{ form_widget(registerForm.plainPassword, {'attr': {'class': 'form-control'}}) }}
+      {{ form_errors(registerForm.plainPassword) }}
     </div>
 
-    <div class="mb-3">
-      {{ form_label(registerForm.password_confirm) }}
-      {{ form_widget(registerForm.password_confirm, {'attr': {'class': 'form-control'}}) }}
-    </div>
-
-    <button type="submit" class="btn btn-primary">S'inscrire</button>
+    <button type="submit" class="btn btn-success">S’inscrire</button>
 
     {{ form_end(registerForm) }}
   </form>
@@ -1831,38 +1850,57 @@ class UserType extends AbstractType
 
 # templates/partials/_navbar.html.twig
 
-<nav class="navbar navbar-expand-lg navbar-dark navbar-custom rounded-3 px-3 mb-4">
-  <a class="navbar-brand fw-bold text-white" href="{{ path('app_home') }}">🌿 PlantShop</a>
-  <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navBar"><span class="navbar-toggler-icon"></span></button>
+<nav class="navbar navbar-expand-lg navbar-dark rounded-3 navbar-custom px-3">
+  <a class="navbar-brand fw-bold text-white" href="{{ path('accueil') }}">🌿 PlantShop</a>
+  <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navBar">
+    <span class="navbar-toggler-icon"></span>
+  </button>
+
   <div class="collapse navbar-collapse" id="navBar">
     <ul class="navbar-nav ms-auto">
       {% if app.user %}
         <li class="nav-item d-flex align-items-center text-white px-2 text-capitalize">
           {{ app.user.name }}{% if app.user.admin %} (Administrateur){% endif %}
         </li>
-        <li class="nav-item"><a class="nav-link" id="cart-link" href="{{ path('panier_index') }}">Mon Panier</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ path('commande_index') }}">Mes commandes</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ path('user_account') }}">Profil</a></li>
+      {% endif %}
+
+      <li class="nav-item">
+        <a class="nav-link" id="cart-link" href="{{ path('panier_index') }}">Mon Panier</a>
+      </li>
+
+      {% if app.user %}
+        <li class="nav-item">
+          <a class="nav-link" href="{{ path('commandes_index') }}">Mes commandes</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ path('utilisateur_afficher', {id: app.user.id}) }}">Profil</a>
+        </li>
+
         {% if app.user.admin %}
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">Admin</a>
             <ul class="dropdown-menu">
-              <li><a class="dropdown-item" href="{{ path('admin_plante_index') }}">Plantes</a></li>
-              <li><a class="dropdown-item" href="{{ path('admin_utilisateur_index') }}">Utilisateurs</a></li>
+              <li><a class="dropdown-item" href="{{ path('admin_plantes_index') }}">Plantes</a></li>
+              <li><a class="dropdown-item" href="{{ path('admin_utilisateurs_index') }}">Utilisateurs</a></li>
             </ul>
           </li>
         {% endif %}
+
         <li class="nav-item ms-2">
-          <form method="post" action="{{ path('app_logout') }}">
+          <form method="post" action="{{ path('app_logout') }}" class="d-inline">
             <input type="hidden" name="_token" value="{{ csrf_token('logout') }}">
-            <button type="submit" class="nav-link btn btn-link px-0 align-baseline text-white" style="text-decoration: none;">
+            <button type="submit" class="nav-link btn btn-link px-0 align-baseline" style="text-decoration: none;">
               Déconnexion
             </button>
           </form>
         </li>
       {% else %}
-        <li class="nav-item"><a class="nav-link" href="{{ path('app_register') }}">S’inscrire</a></li>
-        <li class="nav-item"><a class="nav-link" href="{{ path('app_login') }}">Se connecter</a></li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ path('app_register') }}">S’inscrire</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{{ path('app_login') }}">Se connecter</a>
+        </li>
       {% endif %}
     </ul>
   </div>
@@ -1895,8 +1933,6 @@ class UserType extends AbstractType
  * - DOM API pour manipuler les éléments HTML.
  *
  * @class Cart
- * @author VotreNom
- * @version 1.0
  */
 class Cart {
   /**
@@ -2202,16 +2238,24 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 01/
 │   │   │   └── c2a64bc828fdb49d884f52ee7a6f684bbedef0
 │   │   ├── 03/
-│   │   │   └── 5de27b7ab2e0afda4a424291aa37e3a81c3534
+│   │   │   ├── 267ce159d47627fd7aa1082ca34f2cd755e9ea
+│   │   │   ├── 5de27b7ab2e0afda4a424291aa37e3a81c3534
+│   │   │   └── d9e07ca1011cc8d3b732ddf783559aaf9bac1f
 │   │   ├── 04/
+│   │   │   ├── 2e44828c3ecd2d0b35d0d04b6c19733e23e2ba
 │   │   │   └── 9d24ed966cf7b18fcfb5e60e0934599601f7ce
 │   │   ├── 06/
 │   │   │   ├── e6535c82887143f06e62dc1c730b64cd0f2e12
 │   │   │   └── f331800b055cbcb2d2993e33f8906e79bc9fc3
 │   │   ├── 07/
 │   │   │   └── b1737a88f31854c74ae46f41c34c146d3b2ca4
+│   │   ├── 08/
+│   │   │   └── f88afaaecebb02edaa79876af10d435095e18c
 │   │   ├── 0a/
-│   │   │   └── 49f9543f95bf5a53985e4f4e6de21086bc5b7a
+│   │   │   ├── 49f9543f95bf5a53985e4f4e6de21086bc5b7a
+│   │   │   └── 7bafcb7fc2b1396905f55f95b661de00a71604
+│   │   ├── 0b/
+│   │   │   └── a4f6052b297d8904c4a3934fe3af76b1600ef5
 │   │   ├── 0c/
 │   │   │   └── 6e0decbd50ea7b2e760f681e8a8ab34f26724d
 │   │   ├── 0f/
@@ -2219,7 +2263,9 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── c74bbac4b757dd49782f0be496f6fd7e07e47c
 │   │   │   └── d8dfec7f57edcf1776918142ffc92957d5f044
 │   │   ├── 10/
-│   │   │   └── 69c1476fda90ed10c4e2662c87c092458a1b32
+│   │   │   ├── 22988717fe3ad07317325b181209fe465b77ad
+│   │   │   ├── 69c1476fda90ed10c4e2662c87c092458a1b32
+│   │   │   └── 7a9d72a291eae715f91ae3415e6cb16116b75d
 │   │   ├── 12/
 │   │   │   └── bb4086ade75247b4cda6e3148fa64f7733789f
 │   │   ├── 13/
@@ -2259,6 +2305,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── 6a76f94dce138741e2d63ae83a11c1879031d9
 │   │   ├── 2f/
 │   │   │   └── 21c45aa9354f281734d0d757293cbb0b275730
+│   │   ├── 30/
+│   │   │   └── b6db53a1c52d6217edf2ad9e6469aed726474f
 │   │   ├── 31/
 │   │   │   ├── 0ed68e5f65d31f032d1d7340713466db9a6946
 │   │   │   └── ec5da468a00a5dd7fe78e01f2b335d5cf2267b
@@ -2273,6 +2321,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── dac4d733793371464abd8181707b66ef002d5e
 │   │   ├── 37/
 │   │   │   └── 996185abc34a33c6badfcd4ebd402756c57933
+│   │   ├── 39/
+│   │   │   └── 955c56b0c113fd2e3d6db9c63d10a9317cbd14
 │   │   ├── 3b/
 │   │   │   ├── 992d5ed392d11a6d51a7c92b1dd01b570dc32d
 │   │   │   └── 9eb8e667bfc27f5389a06ba631be41416c65ca
@@ -2286,73 +2336,120 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 40/
 │   │   │   └── d40405e1e9651723b0169bac8f1a36489021ea
 │   │   ├── 41/
+│   │   │   ├── 6b0468faa82384dd7005194f3d51e27d0dea84
 │   │   │   ├── 8f2de10328c15398c025f43f7afdb73471ba5c
 │   │   │   └── ef8140ba811c0da46ce1962ffa50d4c56b9840
+│   │   ├── 42/
+│   │   │   └── 641058a7d205ebd1556e0f937ac97323a3c6bb
 │   │   ├── 43/
 │   │   │   └── 892bba7fab8ceb23025dc201d1a8cbb9e026f6
 │   │   ├── 44/
 │   │   │   └── 277629cd6b0bbb5192b68db86f0036a8fda5e2
 │   │   ├── 46/
 │   │   │   └── 44127bac354e10fa5c2fba373db6001f59c7dc
+│   │   ├── 49/
+│   │   │   └── 6f5e6e9afef860be3d3aaead4d9a8e2c627409
+│   │   ├── 4c/
+│   │   │   └── 96134f6cb6dddc4fee28287a16a076d47b53a6
 │   │   ├── 4e/
 │   │   │   └── efe1537cefc8499226365c0483b0f534ad7022
+│   │   ├── 4f/
+│   │   │   └── afb484ad2c311b4e590924bc4f93868f3f68fe
 │   │   ├── 51/
 │   │   │   └── 76582e5f184cfcee87a658166392dd1c0da654
+│   │   ├── 52/
+│   │   │   ├── 4995ba7accd482e673a1199a27a6c67736157f
+│   │   │   └── 8bdcc084dde1077460ba9feb857953716cb384
 │   │   ├── 53/
 │   │   │   └── e979685370923798d3da25456413313cba5288
+│   │   ├── 54/
+│   │   │   └── c6d8df5792dd7fccdc2cc7ffa222166e83032e
+│   │   ├── 55/
+│   │   │   └── a438fc479bb6d8ff6931c6a6cbce3b3bb7cfd0
 │   │   ├── 56/
-│   │   │   └── 320321b47e1cae83f87efc50366fa763d53a14
+│   │   │   ├── 320321b47e1cae83f87efc50366fa763d53a14
+│   │   │   └── b792684c21483ab11cd4d02d65acf9f7d507cd
+│   │   ├── 5a/
+│   │   │   └── eb96491f7a44bb81e5d2e43b9fb1bc01d8fd64
 │   │   ├── 5b/
+│   │   │   ├── dcaed61f41abb1e2a70d57a55eeb7c6f1c2eda
 │   │   │   └── f85ee24ec8a16d402406e9a1b92a8e34bda70e
 │   │   ├── 5d/
 │   │   │   └── f021e3c3703ed6ca92c9bda6fcec77c5bf29b7
 │   │   ├── 5e/
 │   │   │   └── bcdb2153c870e7d915f3b3fcdd55821424284c
+│   │   ├── 62/
+│   │   │   └── d6f0b530e9b2b90bc86a05193cf603b0760869
 │   │   ├── 63/
-│   │   │   └── 028d770140ecd887ff512f8bb11dc9d0f48d51
+│   │   │   ├── 028d770140ecd887ff512f8bb11dc9d0f48d51
+│   │   │   └── 8b96aa994d970173c0b89f5ee011f7e4409639
 │   │   ├── 64/
 │   │   │   ├── 30f15e81e214e308e21a8dc3fe3c2464113693
-│   │   │   └── b6b13d333c7e3a19702b2761c8051b4c699a77
+│   │   │   ├── a235f5f9a90506ead6bd5d7093500d0c55ab5e
+│   │   │   ├── b6b13d333c7e3a19702b2761c8051b4c699a77
+│   │   │   └── c974bcfc92fd3eceeaf1ceabbb6472220b49b7
 │   │   ├── 65/
 │   │   │   ├── 0a9470e90986d869b3d2b545da8b70721ec14e
 │   │   │   └── 7af7e6da4de3ee7faf059b280f7344359b86a3
 │   │   ├── 68/
 │   │   │   └── 99b72003fca67f5a56b945cd3e07f5c8a33774
 │   │   ├── 69/
-│   │   │   └── 5a55d3063aff9d04d3fe24ac7170e8e968647b
+│   │   │   ├── 5a55d3063aff9d04d3fe24ac7170e8e968647b
+│   │   │   └── 5c922c601e80b1c810f1913f86f77674509f90
 │   │   ├── 6a/
-│   │   │   └── 88a72e3a2b9bf81bc27c6c2300ad573426f3e3
+│   │   │   ├── 88a72e3a2b9bf81bc27c6c2300ad573426f3e3
+│   │   │   └── fa57e66ea86c7a192c5b0deca88188b4b81878
 │   │   ├── 6c/
-│   │   │   └── 03bb5f2165830323d3bdfe99612c4731a5d35d
+│   │   │   ├── 03bb5f2165830323d3bdfe99612c4731a5d35d
+│   │   │   ├── 623f3080fb2225ca27e43b980997f9e2a4efc1
+│   │   │   └── 89ceacf33a3c1bc0d89e9ee301301fecf08c38
 │   │   ├── 6e/
+│   │   │   ├── 3a5c791e9a9cfa6431bf2354332604ae5293c0
+│   │   │   ├── 50dd89388061412c39e975a05e13a20e7ec202
 │   │   │   └── b6d8687955f4342d582a5dc21b297692c6b127
+│   │   ├── 70/
+│   │   │   └── f03abd3ac0a55d31a08a7f5ebc91bf274fc633
 │   │   ├── 71/
 │   │   │   └── c583cfa0fbda37e91a08628fbe818c5fc18ef5
 │   │   ├── 72/
 │   │   │   ├── 06bb31e3ff306b255ef337da88ebe0588ad309
 │   │   │   └── a0682dc0751620910e8a44eea77d96dec8235a
+│   │   ├── 73/
+│   │   │   └── 7340450d709aa9b64c965e78de0f2bec950132
 │   │   ├── 74/
 │   │   │   └── 1fee830f7691c7090008eddeba68cb20c86a77
+│   │   ├── 76/
+│   │   │   └── b882f998d94561aea31c0434b282259564608d
 │   │   ├── 77/
 │   │   │   └── 9cd1f2b12e0d30731787539ba67645b73ef796
+│   │   ├── 79/
+│   │   │   └── 8ec0fc670857231f299625da3fc9f08a9ee9cb
 │   │   ├── 7a/
 │   │   │   └── e28e436af94aa03e00b904890e39cb15160ee4
 │   │   ├── 7c/
 │   │   │   └── 03a13bec05a94ab14332b91268387039300ba9
 │   │   ├── 7e/
+│   │   │   ├── 20aa7570331c9050ae32186c073d58c7f6d1f6
 │   │   │   └── f28ede96797b35cc048d55473f6290f8fb1991
+│   │   ├── 7f/
+│   │   │   └── 0985aa7fbebdc019e05a9c16c7d6de6cef4bb0
 │   │   ├── 80/
 │   │   │   └── 4c1dfdf5600766ea816c78a6f7f126ce2c164d
 │   │   ├── 81/
+│   │   │   ├── 45bb87641d0fe520ef1e9a0386e93f6bfc8d6b
 │   │   │   └── 66181c68ab07bfac9aee6e482c7cc24031b8aa
 │   │   ├── 82/
 │   │   │   └── e3a754b6a0fcb238b03c0e47d05219fbf9cf89
+│   │   ├── 83/
+│   │   │   └── 0580f237ede3f6505ec449dbd3186bf755c868
 │   │   ├── 84/
 │   │   │   └── 4bfd70e829f2b566b8e36a15348d3768bb75c0
 │   │   ├── 85/
 │   │   │   └── 2aefa65547c142a852ad559f76f27156993019
 │   │   ├── 86/
-│   │   │   └── 8a596433e7873ba6cf0ec4efcee46bafe62e33
+│   │   │   ├── 6c592595c7d7918b37bfefdae99e40ec4c7efc
+│   │   │   ├── 8a596433e7873ba6cf0ec4efcee46bafe62e33
+│   │   │   └── b62d19ffa8ee32829a29bfdc27b9dfbc18354d
 │   │   ├── 87/
 │   │   │   └── 7eb25d15da47921c07414c3b5d3a333cf889ff
 │   │   ├── 88/
@@ -2364,18 +2461,26 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── d9061d53c8d3913bbb31cc42a41726e128492f
 │   │   ├── 8c/
 │   │   │   └── 7b0fd156142d85d759d7c60e11b896c4e6dbad
+│   │   ├── 8e/
+│   │   │   └── efd71f41972c106a66c4eaad9b66295d13ef78
 │   │   ├── 91/
 │   │   │   ├── 70a4105a0c6f0dd9d8f585d35360848073dbaa
 │   │   │   └── 91abbfb1b35a1c9ccdef722e2edf853e960963
+│   │   ├── 94/
+│   │   │   └── bd0984b15464de3bb077c38f35335fca8eae8b
 │   │   ├── 95/
-│   │   │   └── 59ceee35b522b1fc000f53d380026d1e5a76d9
+│   │   │   ├── 59ceee35b522b1fc000f53d380026d1e5a76d9
+│   │   │   └── 9f2c589806087100a3780025b473cb1d750d84
 │   │   ├── 96/
 │   │   │   └── 5055903137140d354a4f037a244c2434ff1b3b
 │   │   ├── 97/
 │   │   │   ├── 2cd3ef1d13a2394665228407233d90ff78ce3d
 │   │   │   ├── 3c2c5124725591980da7b1ef9a056397379059
+│   │   │   ├── 424b23a959d1842f07427082a16fdc7eee1f9c
 │   │   │   ├── c425c7108dc4ff3793cb8c5e24eda290b4ae61
 │   │   │   └── f32c9af11dbd7811bd035c0bf451ceebd546ed
+│   │   ├── 98/
+│   │   │   └── 2f46cb5e99a0420af627c128c446edb3500a8a
 │   │   ├── 99/
 │   │   │   ├── 5151b50e92d887c6d14507f5063aa505becd9d
 │   │   │   ├── 82c218d6969c72d4c91e3834e3f535e2dfe68b
@@ -2387,26 +2492,35 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── 3918fc99eaa34441409864972af2b4fdab39fb
 │   │   ├── 9e/
 │   │   │   └── 8cd00d6a34b1fdf4ce022bcfa061cd0576a41c
+│   │   ├── 9f/
+│   │   │   └── 908279afabd8b2494e8864ba9122b77b5bbbca
 │   │   ├── a2/
 │   │   │   ├── 0c05ed6d79e0c623691707c566fdddb247f8bd
 │   │   │   ├── 9bf223c0f59d2cbb1469cf2e618f4bfb83f05d
 │   │   │   └── bb53f0394443aed16657129f8940221b90bdfb
 │   │   ├── a3/
-│   │   │   └── 05517c219d1ea74814a4ae6da22badd6c67b7d
+│   │   │   ├── 05517c219d1ea74814a4ae6da22badd6c67b7d
+│   │   │   └── ad434ac583d0c8a7baa4bfc81fff138888f657
 │   │   ├── a4/
 │   │   │   └── 6122a3756cbd9c4225241f338191fc2e56f752
 │   │   ├── a5/
 │   │   │   └── 921324594c1c162d14746dc586256407e82d28
 │   │   ├── a6/
-│   │   │   └── 7f91e25c268247e2034877873a2b27f37619f0
+│   │   │   ├── 7f91e25c268247e2034877873a2b27f37619f0
+│   │   │   └── 9d3d1dea4e4f065d8cf4b8df682b787f65064c
+│   │   ├── a7/
+│   │   │   └── a3864876bf7b9ce15d08486d900bd773913312
 │   │   ├── aa/
 │   │   │   ├── 63e47f3d6e4628c8d8179272e102c7d3bdc063
 │   │   │   └── f57de1ed423ef6a54322c3e4a6dcbcad04fcbe
 │   │   ├── ab/
 │   │   │   └── 1a6379122e3fa1b504be6704d8fd22491a2872
+│   │   ├── ac/
+│   │   │   └── c2abfc099da78ed06c15decaa017e816ce990c
 │   │   ├── ad/
 │   │   │   └── d9969ca33df1ba0be2d6a47e3a011349772cfa
 │   │   ├── af/
+│   │   │   ├── 22c7f0f50b518f7fe80e55736b9b5d706af17c
 │   │   │   └── 66555245d695b82100761cf66c9a122fd63dd7
 │   │   ├── b0/
 │   │   │   ├── 54fd84e00a77f43b2678347d45d34c5d928e2a
@@ -2417,7 +2531,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 51d54fddad9edd4b0bb75c866a23c6fea36f2d
 │   │   │   └── 9153bdebc8c935907c000813740c61a20275d8
 │   │   ├── b4/
-│   │   │   └── 1241ecc1cb4b39b6204aef79a2ae1314107e3f
+│   │   │   ├── 1241ecc1cb4b39b6204aef79a2ae1314107e3f
+│   │   │   └── f9247afe96fc17bcb9dee23d3e2fbd6d3c31a5
 │   │   ├── b6/
 │   │   │   └── 26900bde0e0ce1e476235ca845695730fe7968
 │   │   ├── b7/
@@ -2428,10 +2543,16 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── bb/
 │   │   │   └── 095261620a1b567b40ccd35aebb164c9933a6f
 │   │   ├── bc/
+│   │   │   ├── 54e41b4ccd2aa77fec03b96378e8d1d939269f
 │   │   │   └── 5bcfcfdcda26c45ca11ba675f854276d19548c
+│   │   ├── bf/
+│   │   │   └── 6daad09b60b4ccfd296ad4ad3977dc8c01ea42
 │   │   ├── c1/
 │   │   │   └── ce59cf5841aaca1e612458acf78d7b99526d17
+│   │   ├── c2/
+│   │   │   └── 414007691ac7644c05cd40b4df3227d6998033
 │   │   ├── c5/
+│   │   │   ├── 2fee4c07097591ae4cd68bda61d5f066f4c2f2
 │   │   │   └── 612b0ad1957ade3aeb03176f49da20cda51469
 │   │   ├── c7/
 │   │   │   └── 7d36281e10b2af45acba498d96bae652707cc0
@@ -2439,6 +2560,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── b7d690b200ecc8179c1e9663379247a201d43b
 │   │   ├── cc/
 │   │   │   ├── 114d5db2f408cca98550260c9c33d237d90706
+│   │   │   ├── 55879a922951408b4787c57764d8c2b9931785
 │   │   │   └── 8ce421f436a5337dee32d42b92118ec5fa13fd
 │   │   ├── ce/
 │   │   │   └── 23fe0649bdb8a71de4ca785195771949f9cc89
@@ -2453,6 +2575,12 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── d8/
 │   │   │   ├── c63d7a759288fff327f60ca1e2933aca9a96d8
 │   │   │   └── d530e2c36a68f7916acdfa16c9afafcad06bf0
+│   │   ├── da/
+│   │   │   └── eb835ad04bde7cd4b2bdd767527c294dcaba8e
+│   │   ├── db/
+│   │   │   └── 843dd107beb1e05478b77097f3ee6438af9be3
+│   │   ├── dc/
+│   │   │   └── 2bcee6b679423923f424a0f969b90ea9a34f81
 │   │   ├── dd/
 │   │   │   ├── 3575773fca950f93429a5f25c62f6e92bb0e95
 │   │   │   ├── 47a6ad82a8ecc3adc7dd22262ebe27b4b10534
@@ -2460,8 +2588,14 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 91fbf7439e7fef49a2cb4d917235c6fb550052
 │   │   │   ├── ced4fd693d1f6ecfaeb32f0f6b9c3507753ccb
 │   │   │   └── eca5a267bc4f47d5e1a7cd8bd15694f956cddf
+│   │   ├── e0/
+│   │   │   └── 8f52ffbd646212f865c877ac74058737a40611
 │   │   ├── e6/
 │   │   │   └── 9de29bb2d1d6434b8b29ae775ad8c2e48c5391
+│   │   ├── e7/
+│   │   │   └── 68ea90521839e354685eec742befafe49572b4
+│   │   ├── e9/
+│   │   │   └── 71363ed556315f7387ae64c51a040d0e8a97d6
 │   │   ├── eb/
 │   │   │   └── 13d2a8358189e71c79a8630b430556f694973c
 │   │   ├── ed/
@@ -2473,10 +2607,13 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── ec7e9752d5d5c00f09f220d756c9c7847b6697
 │   │   ├── f3/
 │   │   │   └── 20cbd3ca320003afef7235734d8b525a608113
+│   │   ├── f4/
+│   │   │   └── c2b0ad50e108614d6789c290d090161a617e76
 │   │   ├── f6/
 │   │   │   ├── 3651e5b48615e01c9c27c9f4cc2a0dd069e62e
 │   │   │   ├── 39cea99d64e1a14ea3d9f6b5d82d714234045b
-│   │   │   └── 4654376639f2d3739f092ce6b5473ae4d1b417
+│   │   │   ├── 4654376639f2d3739f092ce6b5473ae4d1b417
+│   │   │   └── f71fb6e535d0bcc0421b84c82f3c8c20c8d633
 │   │   ├── f8/
 │   │   │   └── 53be15cf348ec1b6caaff738de0153eb9eeef0
 │   │   ├── fa/
@@ -2492,6 +2629,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │       │   └── master
 │       └── tags/
 ├── .gitignore
+├── Makefile
 ├── migrations/
 │   ├── .gitignore
 │   ├── Version20250512104230.php
@@ -2506,6 +2644,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │       └── cart.js
 ├── src/
 │   ├── Command/
+│   │   ├── SeedDevCommand.php
 │   │   └── VuesExistenceCheckCommand.php
 │   ├── Controller/
 │   │   ├── Admin/
@@ -2528,7 +2667,6 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   └── UserType.php
 │   ├── Kernel.php
 │   ├── Repository/
-│   │   ├── .gitignore
 │   │   ├── OrderItemRepository.php
 │   │   ├── OrderRepository.php
 │   │   ├── PlantRepository.php
@@ -2536,40 +2674,41 @@ document.addEventListener("DOMContentLoaded", () => {
 │   └── Security/
 │       └── LoginFormAuthenticator.php
 ├── symfony.lock
-└── templates/
-    ├── admin/
-    │   ├── base.html.twig
-    │   ├── plante/
-    │   │   ├── edit.html.twig
-    │   │   ├── index.html.twig
-    │   │   ├── new.html.twig
-    │   │   └── show.html.twig
-    │   └── utilisateur/
-    │       ├── _form.html.twig
-    │       ├── index.html.twig
-    │       └── show.html.twig
-    ├── base.html.twig
-    ├── commande/
-    │   ├── checkout.html.twig
-    │   ├── index.html.twig
-    │   └── success.html.twig
-    ├── home/
-    │   └── index.html.twig
-    ├── panier/
-    │   └── index.html.twig
-    ├── partials/
-    │   ├── _flash.html.twig
-    │   └── _navbar.html.twig
-    ├── plante/
-    │   ├── index.html.twig
-    │   └── show.html.twig
-    ├── registration/
-    │   └── register.html.twig
-    ├── security/
-    │   └── login.html.twig
-    ├── user/
-    │   └── account.html.twig
-    └── utilisateur/
-        └── index.html.twig
+├── templates/
+│   ├── admin/
+│   │   ├── base.html.twig
+│   │   ├── plante/
+│   │   │   ├── edit.html.twig
+│   │   │   ├── index.html.twig
+│   │   │   ├── new.html.twig
+│   │   │   └── show.html.twig
+│   │   └── utilisateur/
+│   │       ├── _form.html.twig
+│   │       ├── index.html.twig
+│   │       └── show.html.twig
+│   ├── base.html.twig
+│   ├── commande/
+│   │   ├── checkout.html.twig
+│   │   ├── index.html.twig
+│   │   └── success.html.twig
+│   ├── home/
+│   │   └── index.html.twig
+│   ├── panier/
+│   │   └── index.html.twig
+│   ├── partials/
+│   │   ├── _flash.html.twig
+│   │   └── _navbar.html.twig
+│   ├── plante/
+│   │   ├── index.html.twig
+│   │   └── show.html.twig
+│   ├── registration/
+│   │   └── register.html.twig
+│   ├── security/
+│   │   └── login.html.twig
+│   ├── user/
+│   │   └── account.html.twig
+│   └── utilisateur/
+│       └── index.html.twig
+└── users.txt
 
-166 directories, 264 files
+200 directories, 333 files

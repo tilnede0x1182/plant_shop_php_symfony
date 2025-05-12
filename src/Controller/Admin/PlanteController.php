@@ -19,4 +19,44 @@ class PlanteController extends AbstractController
 		$plantes = $gestionnaire->getRepository(Plant::class)->findAll();
 		return $this->render('admin/plante/index.html.twig', ['plantes' => $plantes]);
 	}
+
+	#[Route('/nouvelle', name: 'admin_plante_new')]
+	public function create(Request $request, EntityManagerInterface $em): Response
+	{
+		$plante = new Plant();
+		$form = $this->createForm(PlanteType::class, $plante);
+		$form->handleRequest($request);
+
+		if ($form->isSubmitted() && $form->isValid()) {
+			$em->persist($plante);
+			$em->flush();
+			return $this->redirectToRoute('admin_plantes_index');
+		}
+
+		return $this->render('admin/plante/new.html.twig', ['form' => $form->createView()]);
+	}
+
+	#[Route('/{id}/modifier', name: 'admin_plante_edit')]
+	public function edit(Plant $plant, Request $request, EntityManagerInterface $em): Response
+	{
+		$form = $this->createForm(PlanteType::class, $plant);
+		$form->handleRequest($request);
+
+		if ($form->isSubmitted() && $form->isValid()) {
+			$em->flush();
+			return $this->redirectToRoute('admin_plantes_index');
+		}
+
+		return $this->render('admin/plante/edit.html.twig', ['form' => $form->createView(), 'plant' => $plant]);
+	}
+
+	#[Route('/{id}', name: 'admin_plante_delete', methods: ['POST'])]
+	public function delete(Request $request, Plant $plant, EntityManagerInterface $em): Response
+	{
+		if ($this->isCsrfTokenValid('delete' . $plant->getId(), $request->request->get('_token'))) {
+			$em->remove($plant);
+			$em->flush();
+		}
+		return $this->redirectToRoute('admin_plantes_index');
+	}
 }
