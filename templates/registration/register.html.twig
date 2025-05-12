@@ -1,19 +1,35 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Register{% endblock %}
+{% block title %}Inscription{% endblock %}
 
 {% block body %}
-    <h1>Register</h1>
+  <h1 class="text-center mb-4">S'inscrire</h1>
 
-    {{ form_errors(registrationForm) }}
+  <form method="POST" action="{{ path('app_register') }}" class="w-100" style="max-width: 500px;">
+    {{ form_start(registerForm) }}
 
-    {{ form_start(registrationForm) }}
-        {{ form_row(registrationForm.email) }}
-        {{ form_row(registrationForm.plainPassword, {
-            label: 'Password'
-        }) }}
-        {{ form_row(registrationForm.agreeTerms) }}
+    <div class="mb-3">
+      {{ form_label(registerForm.name) }}
+      {{ form_widget(registerForm.name, {'attr': {'class': 'form-control'}}) }}
+    </div>
 
-        <button type="submit" class="btn">Register</button>
-    {{ form_end(registrationForm) }}
+    <div class="mb-3">
+      {{ form_label(registerForm.email) }}
+      {{ form_widget(registerForm.email, {'attr': {'class': 'form-control'}}) }}
+    </div>
+
+    <div class="mb-3">
+      {{ form_label(registerForm.password) }}
+      {{ form_widget(registerForm.password, {'attr': {'class': 'form-control'}}) }}
+    </div>
+
+    <div class="mb-3">
+      {{ form_label(registerForm.password_confirm) }}
+      {{ form_widget(registerForm.password_confirm, {'attr': {'class': 'form-control'}}) }}
+    </div>
+
+    <button type="submit" class="btn btn-primary">S'inscrire</button>
+
+    {{ form_end(registerForm) }}
+  </form>
 {% endblock %}

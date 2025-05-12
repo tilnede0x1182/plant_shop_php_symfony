@@ -1,0 +1,21 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Détails de la Plante{% endblock %}
+
+{% block body %}
+  <div class="card shadow-lg rounded-3">
+    <div class="card-body">
+      <h1 class="card-title">{{ plant.name }}</h1>
+      <p><strong>Prix :</strong> {{ plant.price }} €</p>
+      <p><strong>Description :</strong> {{ plant.description }}</p>
+
+      <div class="d-flex gap-2 flex-wrap mb-3">
+        <button class="btn btn-success rounded-3"
+          onclick="Cart.add({{ plant.id }}, '{{ addslashes(plant.name) }}', {{ plant.price }})">Ajouter au
+          panier</button>
+      </div>
+
+      <a class="btn btn-secondary rounded-3" href="{{ path('plants_index') }}">Retour</a>
+    </div>
+  </div>
+{% endblock %}

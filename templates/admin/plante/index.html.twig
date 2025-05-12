@@ -1,20 +1,35 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Hello Admin/PlanteController!{% endblock %}
+{% block title %}Admin - Plantes{% endblock %}
 
 {% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
+  <h1 class="mb-4">Gestion des plantes</h1>
+  <a class="btn btn-danger rounded-3 mb-3" href="{{ path('admin_plante_new') }}">Nouvelle plante</a>
 
-<div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
-
-    This friendly message is coming from:
-    <ul>
-        <li>Your controller at <code>/home/tilnede0x1182/code/tilnede0x1182/Personnel/2025/Entrainement/PHP/Symfony/plant_shop_php_symfony/src/Controller/Admin/PlanteController.php</code></li>
-        <li>Your template at <code>/home/tilnede0x1182/code/tilnede0x1182/Personnel/2025/Entrainement/PHP/Symfony/plant_shop_php_symfony/templates/admin/plante/index.html.twig</code></li>
-    </ul>
-</div>
+  <table class="table table-hover table-bordered rounded-3 overflow-hidden">
+    <thead class="table-danger">
+      <tr>
+        <th>Nom</th>
+        <th>Prix</th>
+        <th>Stock</th>
+        <th class="text-center">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for plant in plantes %}
+      <tr>
+        <td>{{ plant.name }}</td>
+        <td>{{ plant.price }} €</td>
+        <td>{{ plant.stock }}</td>
+        <td class="text-center">
+          <a class="btn btn-sm btn-outline-dark rounded-3" href="{{ path('admin_plante_edit', {id: plant.id}) }}">✏</a>
+          <form method="post" action="{{ path('admin_plante_delete', {id: plant.id}) }}" class="d-inline" onsubmit="return confirm('Supprimer ?')">
+            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ plant.id) }}">
+            <button class="btn btn-sm btn-danger rounded-3">🗑</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
 {% endblock %}

@@ -1,20 +1,35 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Hello PlanteController!{% endblock %}
+{% block title %}Liste des plantes{% endblock %}
 
 {% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
+  <h1 class="text-center mb-4">🌿 Liste des plantes</h1>
 
-<div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
+  {% if app.user and app.user.admin %}
+    <a class="btn btn-warning mb-3 rounded-3" href="{{ path('admin_plante_create') }}">Nouvelle plante</a>
+  {% endif %}
 
-    This friendly message is coming from:
-    <ul>
-        <li>Your controller at <code>/home/tilnede0x1182/code/tilnede0x1182/Personnel/2025/Entrainement/PHP/Symfony/plant_shop_php_symfony/src/Controller/PlanteController.php</code></li>
-        <li>Your template at <code>/home/tilnede0x1182/code/tilnede0x1182/Personnel/2025/Entrainement/PHP/Symfony/plant_shop_php_symfony/templates/plante/index.html.twig</code></li>
-    </ul>
-</div>
+  <div class="row">
+    {% for plant in plants %}
+      <div class="col-md-4">
+        <div class="card mb-4 shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title">
+              <a class="text-decoration-none text-dark" href="{{ path('plante_show', {'id': plant.id}) }}">{{ plant.name }}</a>
+            </h5>
+            <p class="card-text">
+              <strong>Prix :</strong> {{ plant.price }} €
+              {% if app.user and app.user.admin %}
+                <br><strong>Stock :</strong> {{ plant.stock }}
+              {% endif %}
+            </p>
+            <button class="btn btn-success w-100 rounded-3"
+                    onclick="Cart.add({{ plant.id }}, '{{ plant.name }}', {{ plant.price }}, {{ plant.stock }})">
+              Ajouter au panier
+            </button>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
 {% endblock %}

@@ -1,0 +1,16 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Validation de la commande{% endblock %}
+
+{% block body %}
+  <h1 class="text-center mb-4">Valider ma commande</h1>
+
+  <div id="order-review-container">
+    <p class="alert alert-info">Chargement de votre commande...</p>
+  </div>
+
+  <form id="order-form" method="POST" action="{{ path('orders_store') }}" class="mt-3">
+    <input type="hidden" name="items" id="order-items-input">
+    <button type="submit" class="btn btn-success w-100 rounded-3">Confirmer la commande</button>
+  </form>
+{% endblock %}

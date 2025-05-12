@@ -1,20 +1,27 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Hello PanierController!{% endblock %}
+{% block title %}Mon Panier{% endblock %}
 
 {% block body %}
-<style>
-    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
-    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
-</style>
+  <h1 class="text-center mb-4">🛒 Mon Panier</h1>
 
-<div class="example-wrapper">
-    <h1>Hello {{ controller_name }}! ✅</h1>
+  {% if app.session.get('alert') %}
+    <div class="alert alert-danger">{{ app.session.get('alert') }}</div>
+  {% endif %}
 
-    This friendly message is coming from:
-    <ul>
-        <li>Your controller at <code>/home/tilnede0x1182/code/tilnede0x1182/Personnel/2025/Entrainement/PHP/Symfony/plant_shop_php_symfony/src/Controller/PanierController.php</code></li>
-        <li>Your template at <code>/home/tilnede0x1182/code/tilnede0x1182/Personnel/2025/Entrainement/PHP/Symfony/plant_shop_php_symfony/templates/panier/index.html.twig</code></li>
-    </ul>
-</div>
+  {% if app.session.get('stock_adjust') %}
+    <div class="alert alert-warning mt-2" role="alert"
+         data-stock-adjust='{{ app.session.get('stock_adjust')|json_encode() }}'>
+      Stock ajusté automatiquement sur un ou plusieurs articles.
+    </div>
+  {% endif %}
+
+  <div id="cart-container">
+    <p class="alert alert-info">Chargement du panier...</p>
+  </div>
+
+  <div class="d-flex justify-content-between mt-4">
+    <button class="btn btn-outline-secondary" onclick="Cart.clear()">Vider le panier</button>
+    <a href="{{ path('orders_create') }}" class="btn btn-success">Passer la commande</a>
+  </div>
 {% endblock %}

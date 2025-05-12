@@ -1,0 +1,36 @@
+<nav class="navbar navbar-expand-lg navbar-dark navbar-custom rounded-3 px-3 mb-4">
+  <a class="navbar-brand fw-bold text-white" href="{{ path('app_home') }}">🌿 PlantShop</a>
+  <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navBar"><span class="navbar-toggler-icon"></span></button>
+  <div class="collapse navbar-collapse" id="navBar">
+    <ul class="navbar-nav ms-auto">
+      {% if app.user %}
+        <li class="nav-item d-flex align-items-center text-white px-2 text-capitalize">
+          {{ app.user.name }}{% if app.user.admin %} (Administrateur){% endif %}
+        </li>
+        <li class="nav-item"><a class="nav-link" id="cart-link" href="{{ path('panier_index') }}">Mon Panier</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ path('commande_index') }}">Mes commandes</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ path('user_account') }}">Profil</a></li>
+        {% if app.user.admin %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">Admin</a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="{{ path('admin_plante_index') }}">Plantes</a></li>
+              <li><a class="dropdown-item" href="{{ path('admin_utilisateur_index') }}">Utilisateurs</a></li>
+            </ul>
+          </li>
+        {% endif %}
+        <li class="nav-item ms-2">
+          <form method="post" action="{{ path('app_logout') }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('logout') }}">
+            <button type="submit" class="nav-link btn btn-link px-0 align-baseline text-white" style="text-decoration: none;">
+              Déconnexion
+            </button>
+          </form>
+        </li>
+      {% else %}
+        <li class="nav-item"><a class="nav-link" href="{{ path('app_register') }}">S’inscrire</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ path('app_login') }}">Se connecter</a></li>
+      {% endif %}
+    </ul>
+  </div>
+</nav>

@@ -1,0 +1,29 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Nouvelle Plante{% endblock %}
+
+{% block body %}
+  <h1 class="mb-4">Ajouter une Nouvelle Plante</h1>
+
+  <form method="POST" action="{{ path('admin_plants_store') }}">
+    {{ form_start(form) }}
+      <div class="mb-3">
+        <label for="name" class="form-label">Nom</label>
+        <input type="text" class="form-control" id="name" name="name" value="{{ form.name.vars.value }}">
+      </div>
+      <div class="mb-3">
+        <label for="price" class="form-label">Prix (€)</label>
+        <input type="number" class="form-control" id="price" name="price" value="{{ form.price.vars.value }}">
+      </div>
+      <div class="mb-3">
+        <label for="description" class="form-label">Description</label>
+        <textarea class="form-control" id="description" name="description" rows="3">{{ form.description.vars.value }}</textarea>
+      </div>
+      <div class="mb-3">
+        <label for="stock" class="form-label">Stock</label>
+        <input type="number" class="form-control" id="stock" name="stock" value="{{ form.stock.vars.value }}">
+      </div>
+      <button type="submit" class="btn btn-success">Créer</button>
+    {{ form_end(form) }}
+  </form>
+{% endblock %}

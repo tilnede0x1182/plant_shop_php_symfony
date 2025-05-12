@@ -1,0 +1,23 @@
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Détails de la Plante{% endblock %}
+
+{% block body %}
+  <h1 class="mb-4">Détails de la Plante</h1>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title">{{ plant.name }}</h5>
+      <p><strong>Prix:</strong> {{ plant.price }} €</p>
+      <p><strong>Description:</strong> {{ plant.description }}</p>
+      <p><strong>Stock:</strong> {{ plant.stock }} unités</p>
+
+      <div class="d-flex gap-2">
+        <a href="{{ path('admin_plants_edit', {id: plant.id}) }}" class="btn btn-warning">Modifier</a>
+        <form method="POST" action="{{ path('admin_plants_delete', {id: plant.id}) }}" onsubmit="return confirm('Supprimer cette plante ?')" class="d-inline">
+          <button class="btn btn-danger">Supprimer</button>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}

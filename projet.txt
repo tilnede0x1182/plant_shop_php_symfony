@@ -1,0 +1,2025 @@
+==== FICHIERS UTILES DU PROJET SYMFONY (avec contenu) ====
+
+# config/routes.yaml
+
+controllers:
+    resource:
+        path: ../src/Controller/
+        namespace: App\Controller
+    type: attribute
+
+
+# config/services.yaml
+
+# This file is the entry point to configure your own services.
+# Files in the packages/ subdirectory configure your dependencies.
+
+# Put parameters here that don't need to change on each machine where the app is deployed
+# https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
+parameters:
+
+services:
+    # default configuration for services in *this* file
+    _defaults:
+        autowire: true      # Automatically injects dependencies in your services.
+        autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+
+    # makes classes in src/ available to be used as services
+    # this creates a service per class whose id is the fully-qualified class name
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+
+    # add more service definitions when explicit configuration is needed
+    # please note that last definitions always *replace* previous ones
+
+
+# config/packages/validator.yaml
+
+framework:
+    validation:
+        # Enables validator auto-mapping support.
+        # For instance, basic validation constraints will be inferred from Doctrine's metadata.
+        #auto_mapping:
+        #    App\Entity\: []
+
+when@test:
+    framework:
+        validation:
+            not_compromised_password: false
+
+
+# config/packages/twig.yaml
+
+twig:
+    file_name_pattern: '*.twig'
+
+when@test:
+    twig:
+        strict_variables: true
+
+
+# config/packages/routing.yaml
+
+framework:
+    router:
+        # Configure how to generate URLs in non-HTTP contexts, such as CLI commands.
+        # See https://symfony.com/doc/current/routing.html#generating-urls-in-commands
+        #default_uri: http://localhost
+
+when@prod:
+    framework:
+        router:
+            strict_requirements: null
+
+
+# config/packages/framework.yaml
+
+# see https://symfony.com/doc/current/reference/configuration/framework.html
+framework:
+    secret: '%env(APP_SECRET)%'
+    #csrf_protection: true
+
+    # Note that the session will be started ONLY if you read or write from it.
+    session: true
+
+    #esi: true
+    #fragments: true
+
+when@test:
+    framework:
+        test: true
+        session:
+            storage_factory_id: session.storage.factory.mock_file
+
+
+# config/packages/security.yaml
+
+security:
+    # https://symfony.com/doc/current/security.html#registering-the-user-hashing-passwords
+    password_hashers:
+        Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface: 'auto'
+    # https://symfony.com/doc/current/security.html#loading-the-user-the-user-provider
+    providers:
+        users_in_memory: { memory: null }
+    firewalls:
+        dev:
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            security: false
+        main:
+            lazy: true
+            provider: users_in_memory
+            custom_authenticator: App\Security\LoginFormAuthenticator
+            logout:
+                path: app_logout
+                # where to redirect after logout
+                # target: app_any_route
+
+            remember_me:
+                secret: '%kernel.secret%'
+                lifetime: 604800
+                path: /
+                # by default, the feature is enabled by checking a checkbox in the
+                # login form, uncomment the following line to always enable it.
+                #always_remember_me: true
+
+            # activate different ways to authenticate
+            # https://symfony.com/doc/current/security.html#the-firewall
+
+            # https://symfony.com/doc/current/security/impersonating_user.html
+            # switch_user: true
+
+    # Easy way to control access for large sections of your site
+    # Note: Only the *first* access control that matches will be used
+    access_control:
+        # - { path: ^/admin, roles: ROLE_ADMIN }
+        # - { path: ^/profile, roles: ROLE_USER }
+
+when@test:
+    security:
+        password_hashers:
+            # By default, password hashers are resource intensive and take time. This is
+            # important to generate secure password hashes. In tests however, secure hashes
+            # are not important, waste resources and increase test times. The following
+            # reduces the work factor to the lowest possible values.
+            Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface:
+                algorithm: auto
+                cost: 4 # Lowest possible value for bcrypt
+                time_cost: 3 # Lowest possible value for argon
+                memory_cost: 10 # Lowest possible value for argon
+
+
+# config/packages/doctrine.yaml
+
+doctrine:
+    dbal:
+        url: '%env(resolve:DATABASE_URL)%'
+
+        # IMPORTANT: You MUST configure your server version,
+        # either here or in the DATABASE_URL env var (see .env file)
+        #server_version: '16'
+
+        profiling_collect_backtrace: '%kernel.debug%'
+        use_savepoints: true
+    orm:
+        auto_generate_proxy_classes: true
+        enable_lazy_ghost_objects: true
+        report_fields_where_declared: true
+        validate_xml_mapping: true
+        naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
+        auto_mapping: true
+        mappings:
+            App:
+                type: attribute
+                is_bundle: false
+                dir: '%kernel.project_dir%/src/Entity'
+                prefix: 'App\Entity'
+                alias: App
+
+when@test:
+    doctrine:
+        dbal:
+            # "TEST_TOKEN" is typically set by ParaTest
+            dbname_suffix: '_test%env(default::TEST_TOKEN)%'
+
+when@prod:
+    doctrine:
+        orm:
+            auto_generate_proxy_classes: false
+            proxy_dir: '%kernel.build_dir%/doctrine/orm/Proxies'
+            query_cache_driver:
+                type: pool
+                pool: doctrine.system_cache_pool
+            result_cache_driver:
+                type: pool
+                pool: doctrine.result_cache_pool
+
+    framework:
+        cache:
+            pools:
+                doctrine.result_cache_pool:
+                    adapter: cache.app
+                doctrine.system_cache_pool:
+                    adapter: cache.system
+
+
+# config/packages/doctrine_migrations.yaml
+
+doctrine_migrations:
+    migrations_paths:
+        # namespace is arbitrary but should be different from App\Migrations
+        # as migrations classes should NOT be autoloaded
+        'DoctrineMigrations': '%kernel.project_dir%/migrations'
+    enable_profiler: false
+
+
+# config/packages/csrf.yaml
+
+# Enable stateless CSRF protection for forms and logins/logouts
+framework:
+    form:
+        csrf_protection:
+            token_id: submit
+
+    csrf_protection:
+        stateless_token_ids:
+            - submit
+            - authenticate
+            - logout
+
+
+# config/packages/cache.yaml
+
+framework:
+    cache:
+        # Unique name of your app: used to compute stable namespaces for cache keys.
+        #prefix_seed: your_vendor_name/app_name
+
+        # The "app" cache stores to the filesystem by default.
+        # The data in this cache should persist between deploys.
+        # Other options include:
+
+        # Redis
+        #app: cache.adapter.redis
+        #default_redis_provider: redis://localhost
+
+        # APCu (not recommended with heavy random-write workloads as memory fragmentation can cause perf issues)
+        #app: cache.adapter.apcu
+
+        # Namespaced pools use the above "app" backend by default
+        #pools:
+            #my.dedicated.cache: null
+
+
+# config/routes/framework.yaml
+
+when@dev:
+    _errors:
+        resource: '@FrameworkBundle/Resources/config/routing/errors.xml'
+        prefix: /_error
+
+
+# config/routes/security.yaml
+
+_security_logout:
+    resource: security.route_loader.logout
+    type: service
+
+
+# src/Entity/User.php
+
+<?php
+
+namespace App\Entity;
+
+use App\Repository\UserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
+use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
+
+#[ORM\Entity(repositoryClass: UserRepository::class)]
+#[UniqueEntity(fields: ['email'], message: 'There is already an account with this email')]
+class User implements UserInterface, PasswordAuthenticatedUserInterface
+{
+	#[ORM\Id]
+	#[ORM\GeneratedValue]
+	#[ORM\Column(type: 'integer')]
+	private ?int $id = null;
+
+	#[ORM\Column(type: 'string', length: 255)]
+	private ?string $name = null;
+
+	#[ORM\Column(type: 'string', length: 255, unique: true)]
+	private ?string $email = null;
+
+	#[ORM\Column(type: 'string')]
+	private ?string $password = null;
+
+	#[ORM\Column(type: 'boolean')]
+	private bool $admin = false;
+
+	#[ORM\Column(type: 'datetime', nullable: true)]
+	private ?\DateTimeInterface $emailVerifiedAt = null;
+
+	#[ORM\Column(type: 'string', length: 100, nullable: true)]
+	private ?string $rememberToken = null;
+
+	#[ORM\OneToMany(mappedBy: 'utilisateur', targetEntity: Order::class, orphanRemoval: true)]
+	private Collection $commandes;
+
+	public function __construct()
+	{
+		$this->commandes = new ArrayCollection();
+	}
+
+	// Getters & setters
+
+	public function getId(): ?int
+	{
+		return $this->id;
+	}
+
+	public function getName(): ?string
+	{
+		return $this->name;
+	}
+
+	public function setName(string $name): self
+	{
+		$this->name = $name;
+		return $this;
+	}
+
+	public function getEmail(): ?string
+	{
+		return $this->email;
+	}
+
+	public function setEmail(string $email): self
+	{
+		$this->email = $email;
+		return $this;
+	}
+
+	public function getPassword(): ?string
+	{
+		return $this->password;
+	}
+
+	public function setPassword(string $password): self
+	{
+		$this->password = $password;
+		return $this;
+	}
+
+	public function isAdmin(): bool
+	{
+		return $this->admin;
+	}
+
+	public function setAdmin(bool $admin): self
+	{
+		$this->admin = $admin;
+		return $this;
+	}
+
+	public function getEmailVerifiedAt(): ?\DateTimeInterface
+	{
+		return $this->emailVerifiedAt;
+	}
+
+	public function setEmailVerifiedAt(?\DateTimeInterface $date): self
+	{
+		$this->emailVerifiedAt = $date;
+		return $this;
+	}
+
+	public function getRememberToken(): ?string
+	{
+		return $this->rememberToken;
+	}
+
+	public function setRememberToken(?string $token): self
+	{
+		$this->rememberToken = $token;
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, Order>
+	 */
+	public function getCommandes(): Collection
+	{
+		return $this->commandes;
+	}
+
+	public function addCommande(Order $commande): self
+	{
+		if (!$this->commandes->contains($commande)) {
+			$this->commandes[] = $commande;
+			$commande->setUtilisateur($this);
+		}
+		return $this;
+	}
+
+	public function removeCommande(Order $commande): self
+	{
+		if ($this->commandes->removeElement($commande)) {
+			if ($commande->getUtilisateur() === $this) {
+				$commande->setUtilisateur(null);
+			}
+		}
+		return $this;
+	}
+	public function getUserIdentifier(): string
+	{
+		return (string) $this->email;
+	}
+
+	public function getRoles(): array
+	{
+		return $this->admin ? ['ROLE_ADMIN'] : ['ROLE_USER'];
+	}
+
+	public function eraseCredentials(): void
+	{
+		// Laisser vide si rien à nettoyer
+	}
+}
+
+
+# src/Entity/Order.php
+
+<?php
+
+namespace App\Entity;
+
+use App\Repository\OrderRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\ORM\Mapping as ORM;
+
+#[ORM\Entity(repositoryClass: OrderRepository::class)]
+class Order
+{
+	#[ORM\Id]
+	#[ORM\GeneratedValue]
+	#[ORM\Column(type: 'integer')]
+	private ?int $id = null;
+
+	#[ORM\ManyToOne(inversedBy: 'commandes')]
+	#[ORM\JoinColumn(nullable: false)]
+	private ?User $utilisateur = null;
+
+	#[ORM\Column(type: 'integer')]
+	private int $totalPrice = 0;
+
+	#[ORM\Column(type: 'string', length: 100)]
+	private string $status;
+
+	#[ORM\Column(type: 'datetime')]
+	private \DateTimeInterface $createdAt;
+
+	#[ORM\Column(type: 'datetime')]
+	private \DateTimeInterface $updatedAt;
+
+	#[ORM\OneToMany(mappedBy: 'commande', targetEntity: OrderItem::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+	private Collection $articles;
+
+	public function __construct()
+	{
+		$this->articles = new ArrayCollection();
+		$this->createdAt = new \DateTime();
+		$this->updatedAt = new \DateTime();
+	}
+
+	public function getId(): ?int
+	{
+		return $this->id;
+	}
+
+	public function getUtilisateur(): ?User
+	{
+		return $this->utilisateur;
+	}
+
+	public function setUtilisateur(?User $user): self
+	{
+		$this->utilisateur = $user;
+		return $this;
+	}
+
+	public function getTotalPrice(): int
+	{
+		return $this->totalPrice;
+	}
+
+	public function setTotalPrice(int $value): self
+	{
+		$this->totalPrice = $value;
+		return $this;
+	}
+
+	public function getStatus(): string
+	{
+		return $this->status;
+	}
+
+	public function setStatus(string $status): self
+	{
+		$this->status = $status;
+		return $this;
+	}
+
+	public function getCreatedAt(): \DateTimeInterface
+	{
+		return $this->createdAt;
+	}
+
+	public function setCreatedAt(\DateTimeInterface $dt): self
+	{
+		$this->createdAt = $dt;
+		return $this;
+	}
+
+	public function getUpdatedAt(): \DateTimeInterface
+	{
+		return $this->updatedAt;
+	}
+
+	public function setUpdatedAt(\DateTimeInterface $dt): self
+	{
+		$this->updatedAt = $dt;
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, OrderItem>
+	 */
+	public function getArticles(): Collection
+	{
+		return $this->articles;
+	}
+
+	public function addArticle(OrderItem $item): self
+	{
+		if (!$this->articles->contains($item)) {
+			$this->articles[] = $item;
+			$item->setCommande($this);
+		}
+		return $this;
+	}
+
+	public function removeArticle(OrderItem $item): self
+	{
+		if ($this->articles->removeElement($item)) {
+			if ($item->getCommande() === $this) {
+				$item->setCommande(null);
+			}
+		}
+		return $this;
+	}
+}
+
+
+# src/Entity/OrderItem.php
+
+<?php
+
+namespace App\Entity;
+
+use App\Repository\OrderItemRepository;
+use Doctrine\ORM\Mapping as ORM;
+
+#[ORM\Entity(repositoryClass: OrderItemRepository::class)]
+class OrderItem
+{
+	#[ORM\Id]
+	#[ORM\GeneratedValue]
+	#[ORM\Column(type: 'integer')]
+	private ?int $id = null;
+
+	#[ORM\ManyToOne(inversedBy: 'articles')]
+	#[ORM\JoinColumn(nullable: false)]
+	private ?Order $commande = null;
+
+	#[ORM\ManyToOne(inversedBy: 'articles')]
+	#[ORM\JoinColumn(nullable: false)]
+	private ?Plant $plante = null;
+
+	#[ORM\Column(type: 'integer')]
+	private int $quantity;
+
+	public function getId(): ?int
+	{
+		return $this->id;
+	}
+
+	public function getCommande(): ?Order
+	{
+		return $this->commande;
+	}
+
+	public function setCommande(?Order $order): self
+	{
+		$this->commande = $order;
+		return $this;
+	}
+
+	public function getPlante(): ?Plant
+	{
+		return $this->plante;
+	}
+
+	public function setPlante(?Plant $plant): self
+	{
+		$this->plante = $plant;
+		return $this;
+	}
+
+	public function getQuantity(): int
+	{
+		return $this->quantity;
+	}
+
+	public function setQuantity(int $qty): self
+	{
+		$this->quantity = $qty;
+		return $this;
+	}
+}
+
+
+# src/Entity/Plant.php
+
+<?php
+
+namespace App\Entity;
+
+use App\Repository\PlantRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\ORM\Mapping as ORM;
+
+#[ORM\Entity(repositoryClass: PlantRepository::class)]
+class Plant
+{
+	#[ORM\Id]
+	#[ORM\GeneratedValue]
+	#[ORM\Column(type: 'integer')]
+	private ?int $id = null;
+
+	#[ORM\Column(type: 'string', length: 255)]
+	private ?string $name = null;
+
+	#[ORM\Column(type: 'integer')]
+	private int $price;
+
+	#[ORM\Column(type: 'text', nullable: true)]
+	private ?string $description = null;
+
+	#[ORM\Column(type: 'integer')]
+	private int $stock;
+
+	#[ORM\OneToMany(mappedBy: 'plante', targetEntity: OrderItem::class, orphanRemoval: true)]
+	private Collection $articles;
+
+	public function __construct()
+	{
+		$this->articles = new ArrayCollection();
+	}
+
+	public function getId(): ?int
+	{
+		return $this->id;
+	}
+
+	public function getName(): ?string
+	{
+		return $this->name;
+	}
+
+	public function setName(string $name): self
+	{
+		$this->name = $name;
+		return $this;
+	}
+
+	public function getPrice(): int
+	{
+		return $this->price;
+	}
+
+	public function setPrice(int $price): self
+	{
+		$this->price = $price;
+		return $this;
+	}
+
+	public function getDescription(): ?string
+	{
+		return $this->description;
+	}
+
+	public function setDescription(?string $description): self
+	{
+		$this->description = $description;
+		return $this;
+	}
+
+	public function getStock(): int
+	{
+		return $this->stock;
+	}
+
+	public function setStock(int $stock): self
+	{
+		$this->stock = $stock;
+		return $this;
+	}
+
+	/**
+	 * @return Collection<int, OrderItem>
+	 */
+	public function getArticles(): Collection
+	{
+		return $this->articles;
+	}
+
+	public function addArticle(OrderItem $item): self
+	{
+		if (!$this->articles->contains($item)) {
+			$this->articles[] = $item;
+			$item->setPlante($this);
+		}
+		return $this;
+	}
+
+	public function removeArticle(OrderItem $item): self
+	{
+		if ($this->articles->removeElement($item)) {
+			if ($item->getPlante() === $this) {
+				$item->setPlante(null);
+			}
+		}
+		return $this;
+	}
+}
+
+
+# src/Controller/SecurityController.php
+
+<?php
+
+namespace App\Controller;
+
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
+
+class SecurityController extends AbstractController
+{
+    #[Route(path: '/login', name: 'app_login')]
+    public function login(AuthenticationUtils $authenticationUtils): Response
+    {
+        // if ($this->getUser()) {
+        //     return $this->redirectToRoute('target_path');
+        // }
+
+        // get the login error if there is one
+        $error = $authenticationUtils->getLastAuthenticationError();
+        // last username entered by the user
+        $lastUsername = $authenticationUtils->getLastUsername();
+
+        return $this->render('security/login.html.twig', ['last_username' => $lastUsername, 'error' => $error]);
+    }
+
+    #[Route(path: '/logout', name: 'app_logout')]
+    public function logout(): void
+    {
+        throw new \LogicException('This method can be blank - it will be intercepted by the logout key on your firewall.');
+    }
+}
+
+
+# src/Controller/PanierController.php
+
+<?php
+
+namespace App\Controller;
+
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+
+class PanierController extends AbstractController
+{
+	#[Route('/panier', name: 'panier_index')]
+	public function index(): Response
+	{
+		return $this->render('panier/index.html.twig');
+	}
+}
+
+
+# src/Controller/Admin/PlanteController.php
+
+<?php
+
+namespace App\Controller\Admin;
+
+use App\Entity\Plante;
+use App\Form\PlanteType;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+
+#[Route('/admin/plantes')]
+class PlanteController extends AbstractController
+{
+	#[Route('', name: 'admin_plantes_index')]
+	public function index(EntityManagerInterface $gestionnaire): Response
+	{
+		$plantes = $gestionnaire->getRepository(Plante::class)->findAll();
+		return $this->render('admin/plante/index.html.twig', ['plantes' => $plantes]);
+	}
+}
+
+
+# src/Controller/Admin/UtilisateurController.php
+
+<?php
+
+namespace App\Controller\Admin;
+
+use App\Entity\Utilisateur;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+
+#[Route('/admin/utilisateurs')]
+class UtilisateurController extends AbstractController
+{
+	#[Route('', name: 'admin_utilisateurs_index')]
+	public function index(): Response
+	{
+		// À implémenter
+		return $this->render('admin/utilisateur/index.html.twig');
+	}
+}
+
+
+# src/Controller/PlanteController.php
+
+<?php
+
+namespace App\Controller;
+
+use App\Entity\Plante;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+
+class PlanteController extends AbstractController
+{
+	#[Route('/', name: 'accueil')]
+	public function index(EntityManagerInterface $gestionnaire): Response
+	{
+		$plantes = $gestionnaire->getRepository(Plante::class)->findBy(['stock' => 0], ['name' => 'ASC']);
+		return $this->render('plante/index.html.twig', ['plantes' => $plantes]);
+	}
+
+	#[Route('/plantes/{id}', name: 'plante_afficher')]
+	public function show(Plante $plante): Response
+	{
+		return $this->render('plante/show.html.twig', ['plante' => $plante]);
+	}
+}
+
+
+# src/Controller/UtilisateurController.php
+
+<?php
+
+namespace App\Controller;
+
+use App\Entity\Utilisateur;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+
+class UtilisateurController extends AbstractController
+{
+	#[Route('/utilisateurs/{id}', name: 'utilisateur_afficher')]
+	public function show(Utilisateur $utilisateur): Response
+	{
+		$this->denyAccessUnlessGranted('ROLE_USER');
+		return $this->render('utilisateur/show.html.twig', ['utilisateur' => $utilisateur]);
+	}
+
+	#[Route('/utilisateurs/{id}/modifier', name: 'utilisateur_modifier')]
+	public function edit(Utilisateur $utilisateur): Response
+	{
+		$this->denyAccessUnlessGranted('ROLE_USER');
+		return $this->render('utilisateur/edit.html.twig', ['utilisateur' => $utilisateur]);
+	}
+}
+
+
+# src/Controller/CommandeController.php
+
+<?php
+
+namespace App\Controller;
+
+use App\Entity\Commande;
+use App\Entity\CommandeItem;
+use App\Entity\Plante;
+use App\Repository\PlanteRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
+
+class CommandeController extends AbstractController
+{
+	#[Route('/commandes', name: 'commandes_index')]
+	public function index(): Response
+	{
+		$utilisateur = $this->getUser();
+		$commandes = $utilisateur->getCommandes();
+
+		return $this->render('commande/index.html.twig', ['commandes' => $commandes]);
+	}
+
+	#[Route('/commandes/nouvelle', name: 'commande_creer')]
+	public function create(): Response
+	{
+		return $this->render('commande/new.html.twig');
+	}
+
+	#[Route('/commandes', name: 'commande_enregistrer', methods: ['POST'])]
+	public function store(Request $requete, EntityManagerInterface $gestionnaire, PlanteRepository $repo): Response
+	{
+		$donnees = json_decode($requete->get('items'), true);
+		$total = 0;
+
+		$commande = new Commande();
+		$commande->setUtilisateur($this->getUser());
+		$commande->setStatut('confirmed');
+
+		foreach ($donnees as $ligne) {
+			$plante = $repo->find($ligne['plant_id']);
+			if ($plante->getStock() < $ligne['quantity']) {
+				return $this->redirectToRoute('commande_creer', [], Response::HTTP_SEE_OTHER);
+			}
+			$plante->setStock($plante->getStock() - $ligne['quantity']);
+			$item = new CommandeItem();
+			$item->setPlante($plante);
+			$item->setQuantite($ligne['quantity']);
+			$item->setCommande($commande);
+			$total += $plante->getPrix() * $ligne['quantity'];
+			$gestionnaire->persist($item);
+		}
+		$commande->setTotal($total);
+		$gestionnaire->persist($commande);
+		$gestionnaire->flush();
+
+		return $this->redirectToRoute('commande_creer', ['success' => true]);
+	}
+}
+
+
+# src/Controller/RegistrationController.php
+
+<?php
+
+namespace App\Controller;
+
+use App\Entity\User;
+use App\Form\RegistrationForm;
+use App\Security\LoginFormAuthenticator;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use Symfony\Component\Routing\Attribute\Route;
+
+class RegistrationController extends AbstractController
+{
+    #[Route('/register', name: 'app_register')]
+    public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher, Security $security, EntityManagerInterface $entityManager): Response
+    {
+        $user = new User();
+        $form = $this->createForm(RegistrationForm::class, $user);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            /** @var string $plainPassword */
+            $plainPassword = $form->get('plainPassword')->getData();
+
+            // encode the plain password
+            $user->setPassword($userPasswordHasher->hashPassword($user, $plainPassword));
+
+            $entityManager->persist($user);
+            $entityManager->flush();
+
+            // do anything else you need here, like send an email
+
+            return $security->login($user, LoginFormAuthenticator::class, 'main');
+        }
+
+        return $this->render('registration/register.html.twig', [
+            'registrationForm' => $form,
+        ]);
+    }
+}
+
+
+# templates/admin/utilisateur/show.html.twig
+
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Détails Utilisateur{% endblock %}
+
+{% block body %}
+  <h1 class="mb-4">Détails de l'utilisateur</h1>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title">{{ user.name }}</h5>
+      <p><strong>Email:</strong> {{ user.email }}</p>
+      <p><strong>Admin:</strong> {{ user.admin ? 'Oui' : 'Non' }}</p>
+      <p><strong>Inscrit le:</strong> {{ user.createdAt|date('d/m/Y H:i') }}</p>
+
+      <div class="d-flex gap-2">
+        <a href="{{ path('admin_users_edit', {id: user.id}) }}" class="btn btn-warning">Modifier</a>
+        <form method="POST" action="{{ path('admin_users_delete', {id: user.id}) }}" onsubmit="return confirm('Supprimer cet utilisateur ?')">
+          <button class="btn btn-danger">Supprimer</button>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+
+# templates/admin/utilisateur/index.html.twig
+
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Gestion des Utilisateurs{% endblock %}
+
+{% block body %}
+  <h1 class="mb-4">Liste des utilisateurs</h1>
+
+  <a href="{{ path('admin_users_create') }}" class="btn btn-success mb-3">Ajouter un utilisateur</a>
+
+  <table class="table table-striped table-bordered">
+    <thead class="table-light">
+      <tr>
+        <th>Nom</th>
+        <th>Email</th>
+        <th>Admin</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for user in users %}
+        <tr>
+          <td>{{ user.name }}</td>
+          <td>{{ user.email }}</td>
+          <td>{{ user.admin ? 'Oui' : 'Non' }}</td>
+          <td>
+            <a href="{{ path('admin_users_show', {id: user.id}) }}" class="btn btn-info btn-sm">Voir</a>
+            <a href="{{ path('admin_users_edit', {id: user.id}) }}" class="btn btn-warning btn-sm">Modifier</a>
+            <form method="POST" action="{{ path('admin_users_delete', {id: user.id}) }}" onsubmit="return confirm('Supprimer cet utilisateur ?')" class="d-inline">
+              <button class="btn btn-danger btn-sm">Supprimer</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
+
+
+# templates/admin/base.html.twig
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Administration{% endblock %}</title>
+  <link rel="stylesheet" href="{{ asset('build/styles.css') }}">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="{{ path('admin_home') }}">🌿 Admin PlantShop</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ms-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="{{ path('admin_users_index') }}">Utilisateurs</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ path('admin_plants_index') }}">Plantes</a>
+          </li>
+          <li class="nav-item">
+            <form method="POST" action="{{ path('app_logout') }}" class="d-inline">
+              <button class="btn btn-outline-light">Déconnexion</button>
+            </form>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+    {% block body %}{% endblock %}
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+
+# templates/admin/plante/edit.html.twig
+
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Modifier la Plante{% endblock %}
+
+{% block body %}
+  <h1 class="mb-4">Modifier la Plante</h1>
+
+  <form method="POST" action="{{ path('admin_plants_update', {id: plant.id}) }}" class="mb-4">
+    {{ form_start(form) }}
+      <div class="mb-3">
+        <label for="name" class="form-label">Nom</label>
+        <input type="text" class="form-control" id="name" name="name" value="{{ plant.name }}">
+      </div>
+      <div class="mb-3">
+        <label for="price" class="form-label">Prix (€)</label>
+        <input type="number" class="form-control" id="price" name="price" value="{{ plant.price }}">
+      </div>
+      <div class="mb-3">
+        <label for="description" class="form-label">Description</label>
+        <textarea class="form-control" id="description" name="description" rows="3">{{ plant.description }}</textarea>
+      </div>
+      <div class="mb-3">
+        <label for="stock" class="form-label">Stock</label>
+        <input type="number" class="form-control" id="stock" name="stock" value="{{ plant.stock }}">
+      </div>
+      <button type="submit" class="btn btn-warning">Mettre à jour</button>
+    {{ form_end(form) }}
+  </form>
+{% endblock %}
+
+
+# templates/admin/plante/show.html.twig
+
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Détails de la Plante{% endblock %}
+
+{% block body %}
+  <h1 class="mb-4">Détails de la Plante</h1>
+
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title">{{ plant.name }}</h5>
+      <p><strong>Prix:</strong> {{ plant.price }} €</p>
+      <p><strong>Description:</strong> {{ plant.description }}</p>
+      <p><strong>Stock:</strong> {{ plant.stock }} unités</p>
+
+      <div class="d-flex gap-2">
+        <a href="{{ path('admin_plants_edit', {id: plant.id}) }}" class="btn btn-warning">Modifier</a>
+        <form method="POST" action="{{ path('admin_plants_delete', {id: plant.id}) }}" onsubmit="return confirm('Supprimer cette plante ?')" class="d-inline">
+          <button class="btn btn-danger">Supprimer</button>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+
+# templates/admin/plante/index.html.twig
+
+{% extends 'base.html.twig' %}
+
+{% block title %}Admin - Plantes{% endblock %}
+
+{% block body %}
+  <h1 class="mb-4">Gestion des plantes</h1>
+  <a class="btn btn-danger rounded-3 mb-3" href="{{ path('admin_plante_new') }}">Nouvelle plante</a>
+
+  <table class="table table-hover table-bordered rounded-3 overflow-hidden">
+    <thead class="table-danger">
+      <tr>
+        <th>Nom</th>
+        <th>Prix</th>
+        <th>Stock</th>
+        <th class="text-center">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for plant in plantes %}
+      <tr>
+        <td>{{ plant.name }}</td>
+        <td>{{ plant.price }} €</td>
+        <td>{{ plant.stock }}</td>
+        <td class="text-center">
+          <a class="btn btn-sm btn-outline-dark rounded-3" href="{{ path('admin_plante_edit', {id: plant.id}) }}">✏</a>
+          <form method="post" action="{{ path('admin_plante_delete', {id: plant.id}) }}" class="d-inline" onsubmit="return confirm('Supprimer ?')">
+            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ plant.id) }}">
+            <button class="btn btn-sm btn-danger rounded-3">🗑</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
+
+
+# templates/admin/plante/new.html.twig
+
+{% extends 'admin/base.html.twig' %}
+
+{% block title %}Nouvelle Plante{% endblock %}
+
+{% block body %}
+  <h1 class="mb-4">Ajouter une Nouvelle Plante</h1>
+
+  <form method="POST" action="{{ path('admin_plants_store') }}">
+    {{ form_start(form) }}
+      <div class="mb-3">
+        <label for="name" class="form-label">Nom</label>
+        <input type="text" class="form-control" id="name" name="name" value="{{ form.name.vars.value }}">
+      </div>
+      <div class="mb-3">
+        <label for="price" class="form-label">Prix (€)</label>
+        <input type="number" class="form-control" id="price" name="price" value="{{ form.price.vars.value }}">
+      </div>
+      <div class="mb-3">
+        <label for="description" class="form-label">Description</label>
+        <textarea class="form-control" id="description" name="description" rows="3">{{ form.description.vars.value }}</textarea>
+      </div>
+      <div class="mb-3">
+        <label for="stock" class="form-label">Stock</label>
+        <input type="number" class="form-control" id="stock" name="stock" value="{{ form.stock.vars.value }}">
+      </div>
+      <button type="submit" class="btn btn-success">Créer</button>
+    {{ form_end(form) }}
+  </form>
+{% endblock %}
+
+
+# templates/user/account.html.twig
+
+{% extends 'base.html.twig' %}
+
+{% block title %}Mon profil{% endblock %}
+
+{% block body %}
+  <h1>Mon profil</h1>
+  <p><strong>Nom :</strong> {{ user.name }}</p>
+  <p><strong>Email :</strong> {{ user.email }}</p>
+  <a class="btn btn-danger rounded-3" href="{{ path('user_edit', {id: user.id}) }}">Modifier</a>
+{% endblock %}
+
+
+# templates/utilisateur/index.html.twig
+
+{% extends 'base.html.twig' %}
+
+{% block title %}Hello UtilisateurController!{% endblock %}
+
+{% block body %}
+<style>
+    .example-wrapper { margin: 1em auto; max-width: 800px; width: 95%; font: 18px/1.5 sans-serif; }
+    .example-wrapper code { background: #F5F5F5; padding: 2px 6px; }
+</style>
+
+<div class="example-wrapper">
+    <h1>Hello {{ controller_name }}! ✅</h1>
+
+    This friendly message is coming from:
+    <ul>
+        <li>Your controller at <code>/home/tilnede0x1182/code/tilnede0x1182/Personnel/2025/Entrainement/PHP/Symfony/plant_shop_php_symfony/src/Controller/UtilisateurController.php</code></li>
+        <li>Your template at <code>/home/tilnede0x1182/code/tilnede0x1182/Personnel/2025/Entrainement/PHP/Symfony/plant_shop_php_symfony/templates/utilisateur/index.html.twig</code></li>
+    </ul>
+</div>
+{% endblock %}
+
+
+# templates/base.html.twig
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}PlantShop{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ asset('css/custom.css') }}">
+</head>
+<body class="bg-light">
+  {% include 'partials/_navbar.html.twig' %}
+  <main class="container my-4">
+    {% include 'partials/_flash.html.twig' %}
+    {% block body %}{% endblock %}
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+
+# templates/commande/success.html.twig
+
+{% extends 'base.html.twig' %}
+
+{% block title %}Commande réussie{% endblock %}
+
+{% block body %}
+  <h1 class="text-center mb-4">✅ Commande Confirmée</h1>
+
+  <div class="alert alert-success text-center">
+    <h3>Merci pour votre commande !</h3>
+    <p>Votre commande a été confirmée avec succès. Vous recevrez un email de confirmation avec tous les détails.</p>
+    <a href="{{ path('home') }}" class="btn btn-primary">Retour à l'accueil</a>
+  </div>
+{% endblock %}
+
+
+# templates/commande/index.html.twig
+
+{% extends 'base.html.twig' %}
+
+{% block title %}Mes commandes{% endblock %}
+
+{% block body %}
+  <h1 class="text-center mb-4">📜 Mes commandes</h1>
+
+  {% if orders is empty %}
+    <p class="alert alert-info">Aucune commande.</p>
+  {% else %}
+    <div class="list-group">
+      {% for order in orders %}
+        <div class="list-group-item">
+          <h5 class="mb-1">Commande n°{{ loop.index }}</h5>
+          <p class="text-muted mb-1">Passée le {{ order.createdAt|date('d/m/Y H:i') }} — Total : {{ order.totalPrice }} €</p>
+          <ul class="mb-2">
+            {% for item in order.items %}
+              <li>{{ item.plant.name }} × {{ item.quantity }} – {{ item.plant.price }} €</li>
+            {% endfor %}
+          </ul>
+          <p><strong>Statut :</strong> {{ order.status }}</p>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endblock %}
+
+
+# templates/commande/checkout.html.twig
+
+{% extends 'base.html.twig' %}
+
+{% block title %}Validation de la commande{% endblock %}
+
+{% block body %}
+  <h1 class="text-center mb-4">Valider ma commande</h1>
+
+  <div id="order-review-container">
+    <p class="alert alert-info">Chargement de votre commande...</p>
+  </div>
+
+  <form id="order-form" method="POST" action="{{ path('orders_store') }}" class="mt-3">
+    <input type="hidden" name="items" id="order-items-input">
+    <button type="submit" class="btn btn-success w-100 rounded-3">Confirmer la commande</button>
+  </form>
+{% endblock %}
+
+
+# templates/plante/show.html.twig
+
+{% extends 'base.html.twig' %}
+
+{% block title %}Détails de la Plante{% endblock %}
+
+{% block body %}
+  <div class="card shadow-lg rounded-3">
+    <div class="card-body">
+      <h1 class="card-title">{{ plant.name }}</h1>
+      <p><strong>Prix :</strong> {{ plant.price }} €</p>
+      <p><strong>Description :</strong> {{ plant.description }}</p>
+
+      <div class="d-flex gap-2 flex-wrap mb-3">
+        <button class="btn btn-success rounded-3"
+          onclick="Cart.add({{ plant.id }}, '{{ addslashes(plant.name) }}', {{ plant.price }})">Ajouter au
+          panier</button>
+      </div>
+
+      <a class="btn btn-secondary rounded-3" href="{{ path('plants_index') }}">Retour</a>
+    </div>
+  </div>
+{% endblock %}
+
+
+# templates/plante/index.html.twig
+
+{% extends 'base.html.twig' %}
+
+{% block title %}Liste des plantes{% endblock %}
+
+{% block body %}
+  <h1 class="text-center mb-4">🌿 Liste des plantes</h1>
+
+  {% if app.user and app.user.admin %}
+    <a class="btn btn-warning mb-3 rounded-3" href="{{ path('admin_plante_create') }}">Nouvelle plante</a>
+  {% endif %}
+
+  <div class="row">
+    {% for plant in plants %}
+      <div class="col-md-4">
+        <div class="card mb-4 shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title">
+              <a class="text-decoration-none text-dark" href="{{ path('plante_show', {'id': plant.id}) }}">{{ plant.name }}</a>
+            </h5>
+            <p class="card-text">
+              <strong>Prix :</strong> {{ plant.price }} €
+              {% if app.user and app.user.admin %}
+                <br><strong>Stock :</strong> {{ plant.stock }}
+              {% endif %}
+            </p>
+            <button class="btn btn-success w-100 rounded-3"
+                    onclick="Cart.add({{ plant.id }}, '{{ plant.name }}', {{ plant.price }}, {{ plant.stock }})">
+              Ajouter au panier
+            </button>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endblock %}
+
+
+# templates/security/login.html.twig
+
+{% extends 'base.html.twig' %}
+
+{% block title %}Se connecter{% endblock %}
+
+{% block body %}
+  <h1 class="text-center mb-4">Connexion</h1>
+
+  <form method="POST" action="{{ path('app_login') }}" class="w-100" style="max-width: 500px;">
+    {{ form_start(loginForm) }}
+
+    <div class="mb-3">
+      {{ form_label(loginForm.email) }}
+      {{ form_widget(loginForm.email, {'attr': {'class': 'form-control'}}) }}
+    </div>
+
+    <div class="mb-3">
+      {{ form_label(loginForm.password) }}
+      {{ form_widget(loginForm.password, {'attr': {'class': 'form-control'}}) }}
+    </div>
+
+    <div class="mb-3 form-check">
+      <label class="form-check-label">
+        {{ form_widget(loginForm.rememberMe) }} Se souvenir de moi
+      </label>
+    </div>
+
+    <div class="d-flex justify-content-between">
+      <button type="submit" class="btn btn-primary">Se connecter</button>
+      <a href="{{ path('app_register') }}" class="btn btn-link">S'inscrire</a>
+    </div>
+
+    {{ form_end(loginForm) }}
+  </form>
+{% endblock %}
+
+
+# templates/home/index.html.twig
+
+{% extends 'base.html.twig' %}
+
+{% block title %}Accueil{% endblock %}
+
+{% block body %}
+  <h1 class="text-center mb-4">Bienvenue sur PlantShop 🌿</h1>
+
+  <div class="row">
+    <div class="col-md-12">
+      <h3 class="mb-3">Nos Plantes</h3>
+      <div class="row">
+        {% for plant in plants %}
+          <div class="col-md-4 mb-4">
+            <div class="card">
+              <div class="card-body">
+                <h5 class="card-title">{{ plant.name }}</h5>
+                <p class="card-text">{{ plant.description|slice(0, 50) }}...</p>
+                <p><strong>Prix :</strong> {{ plant.price }} €</p>
+                <a href="{{ path('plante_show', {id: plant.id}) }}" class="btn btn-info">Voir détails</a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+
+# templates/panier/index.html.twig
+
+{% extends 'base.html.twig' %}
+
+{% block title %}Mon Panier{% endblock %}
+
+{% block body %}
+  <h1 class="text-center mb-4">🛒 Mon Panier</h1>
+
+  {% if app.session.get('alert') %}
+    <div class="alert alert-danger">{{ app.session.get('alert') }}</div>
+  {% endif %}
+
+  {% if app.session.get('stock_adjust') %}
+    <div class="alert alert-warning mt-2" role="alert"
+         data-stock-adjust='{{ app.session.get('stock_adjust')|json_encode() }}'>
+      Stock ajusté automatiquement sur un ou plusieurs articles.
+    </div>
+  {% endif %}
+
+  <div id="cart-container">
+    <p class="alert alert-info">Chargement du panier...</p>
+  </div>
+
+  <div class="d-flex justify-content-between mt-4">
+    <button class="btn btn-outline-secondary" onclick="Cart.clear()">Vider le panier</button>
+    <a href="{{ path('orders_create') }}" class="btn btn-success">Passer la commande</a>
+  </div>
+{% endblock %}
+
+
+# templates/registration/register.html.twig
+
+{% extends 'base.html.twig' %}
+
+{% block title %}Inscription{% endblock %}
+
+{% block body %}
+  <h1 class="text-center mb-4">S'inscrire</h1>
+
+  <form method="POST" action="{{ path('app_register') }}" class="w-100" style="max-width: 500px;">
+    {{ form_start(registerForm) }}
+
+    <div class="mb-3">
+      {{ form_label(registerForm.name) }}
+      {{ form_widget(registerForm.name, {'attr': {'class': 'form-control'}}) }}
+    </div>
+
+    <div class="mb-3">
+      {{ form_label(registerForm.email) }}
+      {{ form_widget(registerForm.email, {'attr': {'class': 'form-control'}}) }}
+    </div>
+
+    <div class="mb-3">
+      {{ form_label(registerForm.password) }}
+      {{ form_widget(registerForm.password, {'attr': {'class': 'form-control'}}) }}
+    </div>
+
+    <div class="mb-3">
+      {{ form_label(registerForm.password_confirm) }}
+      {{ form_widget(registerForm.password_confirm, {'attr': {'class': 'form-control'}}) }}
+    </div>
+
+    <button type="submit" class="btn btn-primary">S'inscrire</button>
+
+    {{ form_end(registerForm) }}
+  </form>
+{% endblock %}
+
+
+# templates/partials/_navbar.html.twig
+
+<nav class="navbar navbar-expand-lg navbar-dark navbar-custom rounded-3 px-3 mb-4">
+  <a class="navbar-brand fw-bold text-white" href="{{ path('app_home') }}">🌿 PlantShop</a>
+  <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navBar"><span class="navbar-toggler-icon"></span></button>
+  <div class="collapse navbar-collapse" id="navBar">
+    <ul class="navbar-nav ms-auto">
+      {% if app.user %}
+        <li class="nav-item d-flex align-items-center text-white px-2 text-capitalize">
+          {{ app.user.name }}{% if app.user.admin %} (Administrateur){% endif %}
+        </li>
+        <li class="nav-item"><a class="nav-link" id="cart-link" href="{{ path('panier_index') }}">Mon Panier</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ path('commande_index') }}">Mes commandes</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ path('user_account') }}">Profil</a></li>
+        {% if app.user.admin %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">Admin</a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="{{ path('admin_plante_index') }}">Plantes</a></li>
+              <li><a class="dropdown-item" href="{{ path('admin_utilisateur_index') }}">Utilisateurs</a></li>
+            </ul>
+          </li>
+        {% endif %}
+        <li class="nav-item ms-2">
+          <form method="post" action="{{ path('app_logout') }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('logout') }}">
+            <button type="submit" class="nav-link btn btn-link px-0 align-baseline text-white" style="text-decoration: none;">
+              Déconnexion
+            </button>
+          </form>
+        </li>
+      {% else %}
+        <li class="nav-item"><a class="nav-link" href="{{ path('app_register') }}">S’inscrire</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ path('app_login') }}">Se connecter</a></li>
+      {% endif %}
+    </ul>
+  </div>
+</nav>
+
+
+# templates/partials/_flash.html.twig
+
+{% for type, messages in app.flashes %}
+  {% for message in messages %}
+    <div class="alert alert-{{ type == 'notice' or type == 'success' ? 'success' : 'danger' }} rounded-3">
+      {{ message }}
+    </div>
+  {% endfor %}
+{% endfor %}
+
+
+# public/css/custom.css
+
+.navbar-custom {
+  background-color: #c62828 !important; /* rouge foncé */
+}
+
+==== STRUCTURE DU PROJET (filtres appliqués) ====
+./
+├── bin/
+│   └── console
+├── compose.override.yaml
+├── composer.json
+├── composer.lock
+├── compose.yaml
+├── config/
+│   ├── bundles.php
+│   ├── packages/
+│   │   ├── cache.yaml
+│   │   ├── csrf.yaml
+│   │   ├── doctrine_migrations.yaml
+│   │   ├── doctrine.yaml
+│   │   ├── framework.yaml
+│   │   ├── routing.yaml
+│   │   ├── security.yaml
+│   │   ├── twig.yaml
+│   │   └── validator.yaml
+│   ├── preload.php
+│   ├── routes/
+│   │   ├── framework.yaml
+│   │   └── security.yaml
+│   ├── routes.yaml
+│   └── services.yaml
+├── .env
+├── .env.dev
+├── .git/
+│   ├── branches/
+│   ├── COMMIT_EDITMSG
+│   ├── config
+│   ├── description
+│   ├── gitk.cache
+│   ├── HEAD
+│   ├── hooks/
+│   │   ├── applypatch-msg.sample*
+│   │   ├── commit-msg.sample*
+│   │   ├── fsmonitor-watchman.sample*
+│   │   ├── post-update.sample*
+│   │   ├── pre-applypatch.sample*
+│   │   ├── pre-commit.sample*
+│   │   ├── pre-merge-commit.sample*
+│   │   ├── prepare-commit-msg.sample*
+│   │   ├── pre-push.sample*
+│   │   ├── pre-rebase.sample*
+│   │   ├── pre-receive.sample*
+│   │   ├── push-to-checkout.sample*
+│   │   ├── sendemail-validate.sample*
+│   │   └── update.sample*
+│   ├── index
+│   ├── info/
+│   │   └── exclude
+│   ├── logs/
+│   │   ├── HEAD
+│   │   └── refs/
+│   │       └── heads/
+│   │           └── master
+│   ├── objects/
+│   │   ├── 01/
+│   │   │   └── c2a64bc828fdb49d884f52ee7a6f684bbedef0
+│   │   ├── 04/
+│   │   │   └── 9d24ed966cf7b18fcfb5e60e0934599601f7ce
+│   │   ├── 06/
+│   │   │   ├── e6535c82887143f06e62dc1c730b64cd0f2e12
+│   │   │   └── f331800b055cbcb2d2993e33f8906e79bc9fc3
+│   │   ├── 07/
+│   │   │   └── b1737a88f31854c74ae46f41c34c146d3b2ca4
+│   │   ├── 0a/
+│   │   │   └── 49f9543f95bf5a53985e4f4e6de21086bc5b7a
+│   │   ├── 0f/
+│   │   │   ├── 5f6bc3619fe0f21e8f42dde566fb75329393ee
+│   │   │   ├── c74bbac4b757dd49782f0be496f6fd7e07e47c
+│   │   │   └── d8dfec7f57edcf1776918142ffc92957d5f044
+│   │   ├── 10/
+│   │   │   └── 69c1476fda90ed10c4e2662c87c092458a1b32
+│   │   ├── 12/
+│   │   │   └── bb4086ade75247b4cda6e3148fa64f7733789f
+│   │   ├── 13/
+│   │   │   └── 2eb78090b484991c22c6feb7b786c6a24e6dbb
+│   │   ├── 18/
+│   │   │   └── 4c95e292ac6ba4d02a0abc24bab0e5fa89a2ec
+│   │   ├── 1d/
+│   │   │   └── 5e23bb76b1fa9dc92f047bd4b10a7848c27514
+│   │   ├── 20/
+│   │   │   └── b9b7d957f4fb4d755110c9e28477da6f4d63e7
+│   │   ├── 21/
+│   │   │   └── 33610be8a857e33e4aa920880b148026a01085
+│   │   ├── 23/
+│   │   │   └── 9219f38ab4dfe0077912402b1b37955955d486
+│   │   ├── 24/
+│   │   │   └── c96186799d8be6822cb5cc8433bd3cca645456
+│   │   ├── 25/
+│   │   │   └── 2e8e6fdc9f1ab4a2975e234968773f1428008e
+│   │   ├── 29/
+│   │   │   └── 231d94bd1afd6f35b3c1e64687640d3f1e2f50
+│   │   ├── 2a/
+│   │   │   ├── acb3f5109a7fb8c400ac6e4bb12b1eb770850f
+│   │   │   └── ad0103afdfd334e9fd736dae53f88bd60be661
+│   │   ├── 2c/
+│   │   │   └── e194ffe7ac74f32329d59f46a5f7b6014fd9c8
+│   │   ├── 2d/
+│   │   │   └── 6a76f94dce138741e2d63ae83a11c1879031d9
+│   │   ├── 31/
+│   │   │   ├── 0ed68e5f65d31f032d1d7340713466db9a6946
+│   │   │   └── ec5da468a00a5dd7fe78e01f2b335d5cf2267b
+│   │   ├── 32/
+│   │   │   ├── 9b29d14f9cb3b795a732015a3a5c2ad7d7532a
+│   │   │   ├── b18ba94b83c9ca7f084e72af137f97f7d5c7aa
+│   │   │   └── ef9e130217ffd9724127496875cbc0fb96aa15
+│   │   ├── 34/
+│   │   │   └── ce750428aa4975a81acc1b0fec57b6fe44a4ca
+│   │   ├── 36/
+│   │   │   └── 7af25a56d2decba5041becc5770b16c91b60d4
+│   │   ├── 37/
+│   │   │   └── 996185abc34a33c6badfcd4ebd402756c57933
+│   │   ├── 3b/
+│   │   │   └── 9eb8e667bfc27f5389a06ba631be41416c65ca
+│   │   ├── 3c/
+│   │   │   └── e538359351351fa6b50885cdbbee1a23aaa32a
+│   │   ├── 3d/
+│   │   │   └── a75f4442364e14784706a46f911c138a3f20ea
+│   │   ├── 3f/
+│   │   │   ├── 795d921eae0f2961c18624a1ea9bdfeaca11d4
+│   │   │   └── 81e29bb35b7ed9e65bd6f3b7418f8f96ad1cec
+│   │   ├── 40/
+│   │   │   └── d40405e1e9651723b0169bac8f1a36489021ea
+│   │   ├── 41/
+│   │   │   └── ef8140ba811c0da46ce1962ffa50d4c56b9840
+│   │   ├── 43/
+│   │   │   └── 892bba7fab8ceb23025dc201d1a8cbb9e026f6
+│   │   ├── 44/
+│   │   │   └── 277629cd6b0bbb5192b68db86f0036a8fda5e2
+│   │   ├── 4e/
+│   │   │   └── efe1537cefc8499226365c0483b0f534ad7022
+│   │   ├── 51/
+│   │   │   └── 76582e5f184cfcee87a658166392dd1c0da654
+│   │   ├── 56/
+│   │   │   └── 320321b47e1cae83f87efc50366fa763d53a14
+│   │   ├── 5b/
+│   │   │   └── f85ee24ec8a16d402406e9a1b92a8e34bda70e
+│   │   ├── 5e/
+│   │   │   └── bcdb2153c870e7d915f3b3fcdd55821424284c
+│   │   ├── 63/
+│   │   │   └── 028d770140ecd887ff512f8bb11dc9d0f48d51
+│   │   ├── 64/
+│   │   │   └── 30f15e81e214e308e21a8dc3fe3c2464113693
+│   │   ├── 65/
+│   │   │   └── 7af7e6da4de3ee7faf059b280f7344359b86a3
+│   │   ├── 68/
+│   │   │   └── 99b72003fca67f5a56b945cd3e07f5c8a33774
+│   │   ├── 69/
+│   │   │   └── 5a55d3063aff9d04d3fe24ac7170e8e968647b
+│   │   ├── 6a/
+│   │   │   └── 88a72e3a2b9bf81bc27c6c2300ad573426f3e3
+│   │   ├── 6c/
+│   │   │   └── 03bb5f2165830323d3bdfe99612c4731a5d35d
+│   │   ├── 6e/
+│   │   │   └── b6d8687955f4342d582a5dc21b297692c6b127
+│   │   ├── 71/
+│   │   │   └── c583cfa0fbda37e91a08628fbe818c5fc18ef5
+│   │   ├── 72/
+│   │   │   └── a0682dc0751620910e8a44eea77d96dec8235a
+│   │   ├── 74/
+│   │   │   └── 1fee830f7691c7090008eddeba68cb20c86a77
+│   │   ├── 77/
+│   │   │   └── 9cd1f2b12e0d30731787539ba67645b73ef796
+│   │   ├── 7a/
+│   │   │   └── e28e436af94aa03e00b904890e39cb15160ee4
+│   │   ├── 7c/
+│   │   │   └── 03a13bec05a94ab14332b91268387039300ba9
+│   │   ├── 7e/
+│   │   │   └── f28ede96797b35cc048d55473f6290f8fb1991
+│   │   ├── 80/
+│   │   │   └── 4c1dfdf5600766ea816c78a6f7f126ce2c164d
+│   │   ├── 81/
+│   │   │   └── 66181c68ab07bfac9aee6e482c7cc24031b8aa
+│   │   ├── 82/
+│   │   │   └── e3a754b6a0fcb238b03c0e47d05219fbf9cf89
+│   │   ├── 84/
+│   │   │   └── 4bfd70e829f2b566b8e36a15348d3768bb75c0
+│   │   ├── 85/
+│   │   │   └── 2aefa65547c142a852ad559f76f27156993019
+│   │   ├── 86/
+│   │   │   └── 8a596433e7873ba6cf0ec4efcee46bafe62e33
+│   │   ├── 87/
+│   │   │   └── 7eb25d15da47921c07414c3b5d3a333cf889ff
+│   │   ├── 88/
+│   │   │   └── 0f8650eef60d582c64b3db241703eda77476a4
+│   │   ├── 8a/
+│   │   │   └── c1b1e27677dd760ced5d8176dd19faf7d40a40
+│   │   ├── 8b/
+│   │   │   └── d9061d53c8d3913bbb31cc42a41726e128492f
+│   │   ├── 8c/
+│   │   │   └── 7b0fd156142d85d759d7c60e11b896c4e6dbad
+│   │   ├── 91/
+│   │   │   └── 91abbfb1b35a1c9ccdef722e2edf853e960963
+│   │   ├── 95/
+│   │   │   └── 59ceee35b522b1fc000f53d380026d1e5a76d9
+│   │   ├── 97/
+│   │   │   ├── c425c7108dc4ff3793cb8c5e24eda290b4ae61
+│   │   │   └── f32c9af11dbd7811bd035c0bf451ceebd546ed
+│   │   ├── 99/
+│   │   │   └── 82c218d6969c72d4c91e3834e3f535e2dfe68b
+│   │   ├── 9a/
+│   │   │   └── 153b40e933861fb75827584204a77390e92f97
+│   │   ├── 9b/
+│   │   │   └── 31df15d1118c2983fb6b1c276e38b276024411
+│   │   ├── 9e/
+│   │   │   └── 8cd00d6a34b1fdf4ce022bcfa061cd0576a41c
+│   │   ├── a2/
+│   │   │   ├── 0c05ed6d79e0c623691707c566fdddb247f8bd
+│   │   │   └── 9bf223c0f59d2cbb1469cf2e618f4bfb83f05d
+│   │   ├── a3/
+│   │   │   └── 05517c219d1ea74814a4ae6da22badd6c67b7d
+│   │   ├── a4/
+│   │   │   └── 6122a3756cbd9c4225241f338191fc2e56f752
+│   │   ├── a5/
+│   │   │   └── 921324594c1c162d14746dc586256407e82d28
+│   │   ├── a6/
+│   │   │   └── 7f91e25c268247e2034877873a2b27f37619f0
+│   │   ├── aa/
+│   │   │   └── 63e47f3d6e4628c8d8179272e102c7d3bdc063
+│   │   ├── af/
+│   │   │   └── 66555245d695b82100761cf66c9a122fd63dd7
+│   │   ├── b0/
+│   │   │   ├── 54fd84e00a77f43b2678347d45d34c5d928e2a
+│   │   │   └── 7471c4ede6baff7225277a48262493f1ee7b70
+│   │   ├── b1/
+│   │   │   └── 3d193172204ccc9302be95e9f73b47a585fa1a
+│   │   ├── b2/
+│   │   │   └── 9153bdebc8c935907c000813740c61a20275d8
+│   │   ├── b6/
+│   │   │   └── 26900bde0e0ce1e476235ca845695730fe7968
+│   │   ├── ba/
+│   │   │   ├── 811479186d5a21612698e4d7546e6406fe31c9
+│   │   │   └── ad5689e8458ab3bb94465453c410a6928dd9c9
+│   │   ├── bc/
+│   │   │   └── 5bcfcfdcda26c45ca11ba675f854276d19548c
+│   │   ├── c5/
+│   │   │   └── 612b0ad1957ade3aeb03176f49da20cda51469
+│   │   ├── c7/
+│   │   │   └── 7d36281e10b2af45acba498d96bae652707cc0
+│   │   ├── cc/
+│   │   │   └── 114d5db2f408cca98550260c9c33d237d90706
+│   │   ├── ce/
+│   │   │   └── 23fe0649bdb8a71de4ca785195771949f9cc89
+│   │   ├── d0/
+│   │   │   └── 4d8ba0098e2203e6626cd3d511a92d22f2def1
+│   │   ├── d4/
+│   │   │   └── 2c52d6d2573bc94f3423d8f6d63a8eac3b61d8
+│   │   ├── d5/
+│   │   │   └── d2f9ec0ce45209e9be89e5aa447745656607e1
+│   │   ├── d8/
+│   │   │   ├── c63d7a759288fff327f60ca1e2933aca9a96d8
+│   │   │   └── d530e2c36a68f7916acdfa16c9afafcad06bf0
+│   │   ├── dd/
+│   │   │   ├── 3575773fca950f93429a5f25c62f6e92bb0e95
+│   │   │   ├── 47a6ad82a8ecc3adc7dd22262ebe27b4b10534
+│   │   │   ├── 91fbf7439e7fef49a2cb4d917235c6fb550052
+│   │   │   ├── ced4fd693d1f6ecfaeb32f0f6b9c3507753ccb
+│   │   │   └── eca5a267bc4f47d5e1a7cd8bd15694f956cddf
+│   │   ├── e6/
+│   │   │   └── 9de29bb2d1d6434b8b29ae775ad8c2e48c5391
+│   │   ├── ed/
+│   │   │   └── 2fe51e29ee4768228d56ce2cbc9c466a7c7909
+│   │   ├── f0/
+│   │   │   └── 337a699d16460f8c5fbf48925d61aa13261f4c
+│   │   ├── f1/
+│   │   │   └── ec7e9752d5d5c00f09f220d756c9c7847b6697
+│   │   ├── f6/
+│   │   │   ├── 3651e5b48615e01c9c27c9f4cc2a0dd069e62e
+│   │   │   └── 39cea99d64e1a14ea3d9f6b5d82d714234045b
+│   │   ├── f8/
+│   │   │   └── 53be15cf348ec1b6caaff738de0153eb9eeef0
+│   │   ├── fd/
+│   │   │   └── e145056a3be33f3a67aaf0ab93f5a86c7fc7e2
+│   │   ├── info/
+│   │   └── pack/
+│   └── refs/
+│       ├── heads/
+│       │   └── master
+│       └── tags/
+├── .gitignore
+├── migrations/
+│   ├── .gitignore
+│   ├── Version20250512104230.php
+│   ├── Version20250512104438.php
+│   └── Version20250512105354.php
+├── projet_symfony.txt
+├── projet.txt
+├── public/
+│   ├── css/
+│   │   └── custom.css
+│   └── index.php
+├── src/
+│   ├── Command/
+│   │   └── VuesExistenceCheckCommand.php
+│   ├── Controller/
+│   │   ├── Admin/
+│   │   │   ├── PlanteController.php
+│   │   │   └── UtilisateurController.php
+│   │   ├── CommandeController.php
+│   │   ├── PanierController.php
+│   │   ├── PlanteController.php
+│   │   ├── RegistrationController.php
+│   │   ├── SecurityController.php
+│   │   └── UtilisateurController.php
+│   ├── Entity/
+│   │   ├── OrderItem.php
+│   │   ├── Order.php
+│   │   ├── Plant.php
+│   │   └── User.php
+│   ├── Form/
+│   │   └── RegistrationForm.php
+│   ├── Kernel.php
+│   ├── Repository/
+│   │   ├── .gitignore
+│   │   ├── OrderItemRepository.php
+│   │   ├── OrderRepository.php
+│   │   ├── PlantRepository.php
+│   │   └── UserRepository.php
+│   └── Security/
+│       └── LoginFormAuthenticator.php
+├── symfony.lock
+└── templates/
+    ├── admin/
+    │   ├── base.html.twig
+    │   ├── plante/
+    │   │   ├── edit.html.twig
+    │   │   ├── index.html.twig
+    │   │   ├── new.html.twig
+    │   │   └── show.html.twig
+    │   └── utilisateur/
+    │       ├── index.html.twig
+    │       └── show.html.twig
+    ├── base.html.twig
+    ├── commande/
+    │   ├── checkout.html.twig
+    │   ├── index.html.twig
+    │   └── success.html.twig
+    ├── home/
+    │   └── index.html.twig
+    ├── panier/
+    │   └── index.html.twig
+    ├── partials/
+    │   ├── _flash.html.twig
+    │   └── _navbar.html.twig
+    ├── plante/
+    │   ├── index.html.twig
+    │   └── show.html.twig
+    ├── registration/
+    │   └── register.html.twig
+    ├── security/
+    │   └── login.html.twig
+    ├── user/
+    │   └── account.html.twig
+    └── utilisateur/
+        └── index.html.twig
+
+142 directories, 216 files

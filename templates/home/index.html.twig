@@ -1,0 +1,27 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Accueil{% endblock %}
+
+{% block body %}
+  <h1 class="text-center mb-4">Bienvenue sur PlantShop 🌿</h1>
+
+  <div class="row">
+    <div class="col-md-12">
+      <h3 class="mb-3">Nos Plantes</h3>
+      <div class="row">
+        {% for plant in plants %}
+          <div class="col-md-4 mb-4">
+            <div class="card">
+              <div class="card-body">
+                <h5 class="card-title">{{ plant.name }}</h5>
+                <p class="card-text">{{ plant.description|slice(0, 50) }}...</p>
+                <p><strong>Prix :</strong> {{ plant.price }} €</p>
+                <a href="{{ path('plante_show', {id: plant.id}) }}" class="btn btn-info">Voir détails</a>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+{% endblock %}
