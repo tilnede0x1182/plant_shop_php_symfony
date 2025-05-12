@@ -72,6 +72,7 @@
 		}
 	},
 	"require-dev": {
+		"fakerphp/faker": "^1.24",
 		"symfony/maker-bundle": "^1.63"
 	}
 }

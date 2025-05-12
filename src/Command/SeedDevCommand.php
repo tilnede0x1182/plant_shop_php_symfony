@@ -47,10 +47,10 @@ class SeedDevCommand extends Command
 
 	private function resetDatabase(): void
 	{
-		$this->em->createQuery('DELETE FROM App\Entity\OrderItem')->execute();
-		$this->em->createQuery('DELETE FROM App\Entity\Order')->execute();
-		$this->em->createQuery('DELETE FROM App\Entity\Plant')->execute();
-		$this->em->createQuery('DELETE FROM App\Entity\User')->execute();
+		$this->em->createQuery('DELETE FROM App\Entity\OrderItem oi')->execute();
+		$this->em->createQuery('DELETE FROM App\Entity\Order o')->execute();
+		$this->em->createQuery('DELETE FROM App\Entity\Plant p')->execute();
+		$this->em->createQuery('DELETE FROM App\Entity\User u')->execute();
 	}
 
 	private function seedUsers(Generator $faker, SymfonyStyle $io): array
