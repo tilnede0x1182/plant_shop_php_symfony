@@ -15,24 +15,30 @@ use Symfony\Component\Routing\Attribute\Route;
 
 class RegistrationController extends AbstractController
 {
-    #[Route('/register', name: 'app_register')]
-    public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher, Security $security, EntityManagerInterface $entityManager): Response
-    {
-        $user = new User();
-        $form = $this->createForm(RegistrationForm::class, $user);
-        $form->handleRequest($request);
+	#[Route('/register', name: 'app_register')]
+	public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher, Security $security, EntityManagerInterface $entityManager): Response
+	{
+		$user = new User();
+		$form = $this->createForm(RegistrationForm::class, $user);
+		$form->handleRequest($request);
 
-        if ($form->isSubmitted() && $form->isValid()) {
-            $plainPassword = $form->get('plainPassword')->getData();
-            $user->setPassword($userPasswordHasher->hashPassword($user, $plainPassword));
-            $entityManager->persist($user);
-            $entityManager->flush();
+		if ($form->isSubmitted()) {
+			$plainPassword = $form->get('plainPassword')->getData();
+			$confirmPassword = $form->get('confirmPassword')->getData();
 
-            return $security->login($user, LoginFormAuthenticator::class, 'main');
-        }
+			if ($plainPassword !== $confirmPassword) {
+				$form->get('confirmPassword')->addError(new \Symfony\Component\Form\FormError('Les mots de passe ne correspondent pas.'));
+			} elseif ($form->isValid()) {
+				$user->setPassword($userPasswordHasher->hashPassword($user, $plainPassword));
+				$entityManager->persist($user);
+				$entityManager->flush();
 
-        return $this->render('registration/register.html.twig', [
-            'registerForm' => $form,
-        ]);
-    }
+				return $security->login($user, LoginFormAuthenticator::class, 'main');
+			}
+		}
+
+		return $this->render('registration/register.html.twig', [
+			'registerForm' => $form,
+		]);
+	}
 }

@@ -21,7 +21,10 @@ class UtilisateurController extends AbstractController
 	public function edit(Request $request, User $utilisateur): Response
 	{
 		$this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-		$form = $this->createForm(\App\Form\UserType::class, $utilisateur);
+		$form = $this->createForm(\App\Form\UserType::class, $utilisateur, [
+			'validation_groups' => ['Default'],
+		]);
+		$form->remove('plainPassword');
 		$form->handleRequest($request);
 
 		if ($form->isSubmitted() && $form->isValid()) {
