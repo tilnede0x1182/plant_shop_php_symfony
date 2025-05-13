@@ -1,28 +1,45 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}{{ plante.name }}{% endblock %}
+{% block title %}
+	{{ plante.name }}
+{% endblock %}
 
 {% block body %}
-  <div class="card shadow-lg rounded-3">
-    <div class="card-body">
-      <h1 class="card-title">{{ plante.name }}</h1>
+	<div class="card shadow-lg rounded-3">
+		<div class="card-body">
+			<h1 class="card-title">{{ plante.name }}</h1>
 
-      <p><strong>Prix :</strong> {{ plante.price }} €</p>
+			<p>
+				<strong>Prix :</strong>
+				{{ plante.price }}
+				€</p>
 
-      {% if plante.description %}
-        <p><strong>Description :</strong> {{ plante.description }}</p>
-      {% endif %}
+			{% if plante.description %}
+				<p>
+					<strong>Description :</strong>
+					{{ plante.description }}</p>
+			{% endif %}
 
-      <p><strong>Stock :</strong> {{ plante.stock }}</p>
+			<p>
+				<strong>Stock :</strong>
+				{{ plante.stock }}</p>
 
-      <div class="d-flex gap-2 flex-wrap mb-3">
-        <button class="btn btn-success rounded-3"
-                onclick="Cart.add({{ plante.id }}, '{{ plante.name|e('js') }}', {{ plante.price }}, {{ plante.stock }})">
-          Ajouter au panier
-        </button>
-      </div>
+			<div class="d-flex gap-2 flex-wrap mb-3">
+				<button class="btn btn-success rounded-3" onclick="window.Cart.add({{ plante.id }}, '{{ plante.name|e('js') }}', {{ plante.price }}, {{ plante.stock }})">
+					Ajouter au panier
+				</button>
 
-      <a class="btn btn-secondary rounded-3" href="{{ path('accueil') }}">Retour</a>
-    </div>
-  </div>
+				{% if app.user and app.user.admin %}
+					<a href="{{ path('admin_plante_edit', { id: plante.id }) }}" class="btn btn-warning rounded-3">Modifier</a>
+					<form method="POST" action="{{ path('admin_plante_delete', { id: plante.id }) }}" class="d-inline" onsubmit="return confirm('Supprimer ?')">
+						<input type="hidden" name="_token" value="{{ csrf_token('delete' ~ plante.id) }}">
+						<button class="btn btn-danger rounded-3">Supprimer</button>
+					</form>
+				{% endif %}
+			</div>
+
+
+			<a class="btn btn-secondary rounded-3" href="{{ path('accueil') }}">Retour</a>
+		</div>
+	</div>
 {% endblock %}

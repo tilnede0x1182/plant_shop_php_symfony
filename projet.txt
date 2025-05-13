@@ -1409,36 +1409,44 @@ class UserType extends AbstractType
 
 {% extends 'base.html.twig' %}
 
-{% block title %}Gestion des Utilisateurs{% endblock %}
+{% block title %}Gestion des Utilisateurs
+{% endblock %}
 
 {% block body %}
-  <h1 class="mb-4">Liste des utilisateurs</h1>
+	<h1 class="mb-4">Liste des utilisateurs</h1>
 
-  <table class="table table-striped table-bordered">
-    <thead class="table-light">
-      <tr>
-        <th>Nom</th>
-        <th>Email</th>
-        <th>Admin</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for user in users %}
-        <tr>
-          <td>{{ user.name }}</td>
-          <td>{{ user.email }}</td>
-          <td>{{ user.admin ? 'Oui' : 'Non' }}</td>
-          <td>
-            <a href="{{ path('admin_users_edit', {id: user.id}) }}" class="btn btn-warning btn-sm">Modifier</a>
-            <form method="POST" action="{{ path('admin_users_delete', {id: user.id}) }}" onsubmit="return confirm('Supprimer cet utilisateur ?')" class="d-inline">
-              <button class="btn btn-danger btn-sm">Supprimer</button>
-            </form>
-          </td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+	<table class="table table-striped table-hover">
+		<thead class="table-danger">
+			<tr>
+				<th>Nom</th>
+				<th>Email</th>
+				<th>Admin</th>
+				<th>Actions</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for user in users %}
+				<tr>
+					<td>{{ user.name }}</td>
+					<td>{{ user.email }}</td>
+					<td>
+						{% if user.admin %}
+							<span class="badge bg-success">Oui</span>
+						{% else %}
+							<span class="badge bg-secondary">Non</span>
+						{% endif %}
+					</td>
+					<td>
+						<a href="{{ path('admin_users_edit', {id: user.id}) }}" class="btn btn-warning btn-sm">Modifier</a>
+						<form method="POST" action="{{ path('admin_users_delete', {id: user.id}) }}" onsubmit="return confirm('Supprimer cet utilisateur ?')" class="d-inline">
+							<input type="hidden" name="_token" value="{{ csrf_token('delete' ~ user.id) }}">
+							<button class="btn btn-danger btn-sm">Supprimer</button>
+						</form>
+					</td>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
 {% endblock %}
 
 
@@ -1666,7 +1674,8 @@ class UserType extends AbstractType
 			{% endblock %}
 		</title>
 		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-		<link rel="stylesheet" href="/css/custom.css">
+		<link
+		rel="stylesheet" href="/css/custom.css">
 	{# Votre CSS personnalisé #}
 	</head>
 	<body class="bg-light">
@@ -1678,7 +1687,7 @@ class UserType extends AbstractType
 		<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 		<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 		<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-		<script src="/js/cart.js"></script>
+		<script src="/js/cart.js" defer></script>
 	</body>
 </html>
 
@@ -2249,9 +2258,9 @@ class Cart {
 }
 
 // Initialisation
-window.Cart = new Cart();
 
 document.addEventListener("DOMContentLoaded", () => {
+  window.Cart = new Cart();
 	window.Cart.updateNavbarCount();
 	window.Cart.render();
 });
@@ -2323,6 +2332,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │           └── master
 │   ├── objects/
 │   │   ├── 01/
+│   │   │   ├── 4a85e1b0b38760d281a42ba7078576482b34cf
 │   │   │   └── c2a64bc828fdb49d884f52ee7a6f684bbedef0
 │   │   ├── 03/
 │   │   │   ├── 267ce159d47627fd7aa1082ca34f2cd755e9ea
@@ -2332,6 +2342,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 2e44828c3ecd2d0b35d0d04b6c19733e23e2ba
 │   │   │   └── 9d24ed966cf7b18fcfb5e60e0934599601f7ce
 │   │   ├── 05/
+│   │   │   ├── 2073faca828c3b85f45b5de50cbb6cca61cd40
+│   │   │   ├── 2103e2eaeb9516e4372d1c4aec16918647ce64
 │   │   │   └── f267cb7aa3b2cb612e318a1f5d4b036655a1f1
 │   │   ├── 06/
 │   │   │   ├── e6535c82887143f06e62dc1c730b64cd0f2e12
@@ -2341,10 +2353,12 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── c2d77ae0f51815addb1f2d364ab8a535d1f46d
 │   │   ├── 08/
 │   │   │   ├── 2e6df70adee2de9e54dfeb051b8c5a1a027cae
+│   │   │   ├── af0a60791eef832809c0dc5f854e8ee7f71d61
 │   │   │   └── f88afaaecebb02edaa79876af10d435095e18c
 │   │   ├── 0a/
 │   │   │   ├── 49f9543f95bf5a53985e4f4e6de21086bc5b7a
-│   │   │   └── 7bafcb7fc2b1396905f55f95b661de00a71604
+│   │   │   ├── 7bafcb7fc2b1396905f55f95b661de00a71604
+│   │   │   └── aac7578419f6f7afed92a235d20f7f05816794
 │   │   ├── 0b/
 │   │   │   └── a4f6052b297d8904c4a3934fe3af76b1600ef5
 │   │   ├── 0c/
@@ -2354,13 +2368,16 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 0f/
 │   │   │   ├── 5f6bc3619fe0f21e8f42dde566fb75329393ee
 │   │   │   ├── c74bbac4b757dd49782f0be496f6fd7e07e47c
-│   │   │   └── d8dfec7f57edcf1776918142ffc92957d5f044
+│   │   │   ├── d8dfec7f57edcf1776918142ffc92957d5f044
+│   │   │   └── ea0b03f06b84851e22446a25d95e45f9892eee
 │   │   ├── 10/
 │   │   │   ├── 0607e2bba05809dd5106db7ce67acc7450870e
 │   │   │   ├── 22988717fe3ad07317325b181209fe465b77ad
 │   │   │   ├── 69c1476fda90ed10c4e2662c87c092458a1b32
-│   │   │   └── 7a9d72a291eae715f91ae3415e6cb16116b75d
+│   │   │   ├── 7a9d72a291eae715f91ae3415e6cb16116b75d
+│   │   │   └── c692acccb0ebef533d62ad6d5fc054f6b83379
 │   │   ├── 12/
+│   │   │   ├── 64bb544cdbd2b8f1a2dfd3dfae9396ff6f3f19
 │   │   │   └── bb4086ade75247b4cda6e3148fa64f7733789f
 │   │   ├── 13/
 │   │   │   └── 2eb78090b484991c22c6feb7b786c6a24e6dbb
@@ -2381,6 +2398,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 1d/
 │   │   │   └── 5e23bb76b1fa9dc92f047bd4b10a7848c27514
 │   │   ├── 20/
+│   │   │   ├── 04d444a635085b8f54fd25765eda760c0a2e19
 │   │   │   ├── b9b7d957f4fb4d755110c9e28477da6f4d63e7
 │   │   │   ├── c74c2d98cfea0f91e0e8d3b19592881e1a1632
 │   │   │   └── d26488df4c83c6d2397dca2607711b128686ce
@@ -2389,13 +2407,15 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 22/
 │   │   │   └── ba1092f386474e7f7a0044701c867e6809cd92
 │   │   ├── 23/
-│   │   │   └── 9219f38ab4dfe0077912402b1b37955955d486
+│   │   │   ├── 9219f38ab4dfe0077912402b1b37955955d486
+│   │   │   └── e11b461a9bd6fdb8b0f930413ab6a3bc5975fa
 │   │   ├── 24/
 │   │   │   ├── 6f9e979ae758f640809661fb7fcc9971f2c783
 │   │   │   └── c96186799d8be6822cb5cc8433bd3cca645456
 │   │   ├── 25/
 │   │   │   ├── 2e8e6fdc9f1ab4a2975e234968773f1428008e
-│   │   │   └── a2dfe19e53d688af6cb9a1b5efcdc08c6734a4
+│   │   │   ├── a2dfe19e53d688af6cb9a1b5efcdc08c6734a4
+│   │   │   └── d446691bf9fd18572920a33ea426992570b1e5
 │   │   ├── 26/
 │   │   │   └── de3c7752beb48cb0bbd1c81972086e3d18e28d
 │   │   ├── 27/
@@ -2405,6 +2425,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── dcd3d35360b1b2c3030711b3af05a0c6135985
 │   │   │   └── ec29b2030dd6a41a6cd785a212992dcfb25e8f
 │   │   ├── 2a/
+│   │   │   ├── 45b710dfdea4327cc44facb3384345e6f5ed17
 │   │   │   ├── acb3f5109a7fb8c400ac6e4bb12b1eb770850f
 │   │   │   └── ad0103afdfd334e9fd736dae53f88bd60be661
 │   │   ├── 2c/
@@ -2418,6 +2439,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── b6db53a1c52d6217edf2ad9e6469aed726474f
 │   │   ├── 31/
 │   │   │   ├── 0ed68e5f65d31f032d1d7340713466db9a6946
+│   │   │   ├── 1950a6b72205a6503b2f0617973850b359862d
 │   │   │   └── ec5da468a00a5dd7fe78e01f2b335d5cf2267b
 │   │   ├── 32/
 │   │   │   ├── 9b29d14f9cb3b795a732015a3a5c2ad7d7532a
@@ -2435,6 +2457,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 39/
 │   │   │   ├── 955c56b0c113fd2e3d6db9c63d10a9317cbd14
 │   │   │   └── b65628bbaab258c5559c012ca1cc797aeff7d0
+│   │   ├── 3a/
+│   │   │   └── 4901eb37bae10b5ca243982ae604ce03d7e77f
 │   │   ├── 3b/
 │   │   │   ├── 992d5ed392d11a6d51a7c92b1dd01b570dc32d
 │   │   │   └── 9eb8e667bfc27f5389a06ba631be41416c65ca
@@ -2496,6 +2520,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 58/
 │   │   │   └── b894582abb0989a132c98d563ac3c83b57e737
 │   │   ├── 5a/
+│   │   │   ├── c4e5305826ac533ced9d8561e97a87b8aa6a66
 │   │   │   └── eb96491f7a44bb81e5d2e43b9fb1bc01d8fd64
 │   │   ├── 5b/
 │   │   │   ├── c38c185e130ca20faf1946627e408b92a9f7ff
@@ -2507,6 +2532,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── bcdb2153c870e7d915f3b3fcdd55821424284c
 │   │   ├── 60/
 │   │   │   └── 16958594c84a5d8425fcc76e62bb4d1fb663c9
+│   │   ├── 61/
+│   │   │   └── af2732aed0d33e53acd2caebd80f3ff9b2025c
 │   │   ├── 62/
 │   │   │   └── d6f0b530e9b2b90bc86a05193cf603b0760869
 │   │   ├── 63/
@@ -2539,7 +2566,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 89ceacf33a3c1bc0d89e9ee301301fecf08c38
 │   │   │   └── ca3227630f38480a0e35d1c734b499a387251d
 │   │   ├── 6d/
-│   │   │   └── ea73a93b5be5bcea0eaf16d4cfe1002c65ca6a
+│   │   │   ├── ea73a93b5be5bcea0eaf16d4cfe1002c65ca6a
+│   │   │   └── feb5fbe3d7248e3e02d7e1946e5c8b135d6bf7
 │   │   ├── 6e/
 │   │   │   ├── 3a5c791e9a9cfa6431bf2354332604ae5293c0
 │   │   │   ├── 50dd89388061412c39e975a05e13a20e7ec202
@@ -2569,6 +2597,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 7a/
 │   │   │   ├── 6223db60692078449dfe6ff1cf385d00a39766
 │   │   │   └── e28e436af94aa03e00b904890e39cb15160ee4
+│   │   ├── 7b/
+│   │   │   └── f3cedc766cfb5f6cdefc48e57d3240c9a6592e
 │   │   ├── 7c/
 │   │   │   └── 03a13bec05a94ab14332b91268387039300ba9
 │   │   ├── 7d/
@@ -2583,6 +2613,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 81/
 │   │   │   ├── 45bb87641d0fe520ef1e9a0386e93f6bfc8d6b
 │   │   │   ├── 66181c68ab07bfac9aee6e482c7cc24031b8aa
+│   │   │   ├── 8bdf420f06fedb6e48f903d3ed071f08e01ce1
 │   │   │   └── f5ed8244bf29bf8f99830aecdd1df1ca2c2b74
 │   │   ├── 82/
 │   │   │   └── e3a754b6a0fcb238b03c0e47d05219fbf9cf89
@@ -2664,6 +2695,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 05517c219d1ea74814a4ae6da22badd6c67b7d
 │   │   │   └── ad434ac583d0c8a7baa4bfc81fff138888f657
 │   │   ├── a4/
+│   │   │   ├── 3b2c9831f2b0e5be0d36551ba0b32b6a6a3f60
 │   │   │   ├── 3edd0f47bb15629c299ea8fcae16d3bd2970db
 │   │   │   └── 6122a3756cbd9c4225241f338191fc2e56f752
 │   │   ├── a5/
@@ -2675,6 +2707,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 2d3c8571c00912d46a5dafffdd540e5e9046ca
 │   │   │   └── a3864876bf7b9ce15d08486d900bd773913312
 │   │   ├── a8/
+│   │   │   ├── 80b1a2deee8eb301a4400302abba2f8b389d1c
 │   │   │   └── fa67f0f2d5f763d3988de560139434e18846d4
 │   │   ├── aa/
 │   │   │   ├── 63e47f3d6e4628c8d8179272e102c7d3bdc063
@@ -2724,6 +2757,10 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── bc/
 │   │   │   ├── 54e41b4ccd2aa77fec03b96378e8d1d939269f
 │   │   │   └── 5bcfcfdcda26c45ca11ba675f854276d19548c
+│   │   ├── bd/
+│   │   │   └── 576a22ab9f596c6137b5fc92e61786e4bfe548
+│   │   ├── be/
+│   │   │   └── 5e4dc46f7b63913bc773edb521c5f9e575d08c
 │   │   ├── bf/
 │   │   │   ├── 6daad09b60b4ccfd296ad4ad3977dc8c01ea42
 │   │   │   └── fa1d83528569933830b895f43ab100ca4cf5b2
@@ -2740,6 +2777,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── c7/
 │   │   │   └── 7d36281e10b2af45acba498d96bae652707cc0
 │   │   ├── c8/
+│   │   │   ├── b060154058cb19d3bd5dccec2dc14a109664e7
 │   │   │   └── b7d690b200ecc8179c1e9663379247a201d43b
 │   │   ├── c9/
 │   │   │   └── b0f7bc8cf51f968a643d4d9fec668eb8618ee6
@@ -2793,6 +2831,10 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── a0b53527f1e5695357071f45c8d0dfbed67d87
 │   │   ├── e0/
 │   │   │   └── 8f52ffbd646212f865c877ac74058737a40611
+│   │   ├── e2/
+│   │   │   └── bead1a38d94ae4a700f2f100e925cdafbcc35a
+│   │   ├── e5/
+│   │   │   └── 1659e24b09afa03ba4b2ac06320b9f865ddc21
 │   │   ├── e6/
 │   │   │   └── 9de29bb2d1d6434b8b29ae775ad8c2e48c5391
 │   │   ├── e7/
@@ -2811,13 +2853,16 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── 7048de8b960e6d463a3be80cca6e40d19b47db
 │   │   ├── f1/
 │   │   │   ├── 7ca5831f247f1bc2ffda73a6772aa78b0b9000
+│   │   │   ├── ea71afbb0865df525f882641561f447fc79e2d
 │   │   │   └── ec7e9752d5d5c00f09f220d756c9c7847b6697
 │   │   ├── f2/
-│   │   │   └── 1b280d578a4d9b110e4a5c3045c3bfe4e06ded
+│   │   │   ├── 1b280d578a4d9b110e4a5c3045c3bfe4e06ded
+│   │   │   └── 443838b2b9d94febd7f0cf3f873a2024b25ddd
 │   │   ├── f3/
 │   │   │   └── 20cbd3ca320003afef7235734d8b525a608113
 │   │   ├── f4/
 │   │   │   ├── aac74b4ba55fd82cd404f791dddc48598a8980
+│   │   │   ├── b52f612a2d4bbb3941af7da1580f68e9ec4cc4
 │   │   │   └── c2b0ad50e108614d6789c290d090161a617e76
 │   │   ├── f6/
 │   │   │   ├── 3651e5b48615e01c9c27c9f4cc2a0dd069e62e
@@ -2925,4 +2970,4 @@ document.addEventListener("DOMContentLoaded", () => {
 │       └── show.html.twig
 └── users.txt
 
-233 directories, 427 files
+240 directories, 456 files

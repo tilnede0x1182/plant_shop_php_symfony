@@ -248,9 +248,9 @@ class Cart {
 }
 
 // Initialisation
-window.Cart = new Cart();
 
 document.addEventListener("DOMContentLoaded", () => {
+  window.Cart = new Cart();
 	window.Cart.updateNavbarCount();
 	window.Cart.render();
 });

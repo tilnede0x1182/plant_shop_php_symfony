@@ -21,7 +21,7 @@
 	</div>
 
 	<div id="cart-actions" class="d-flex justify-content-between mt-4 d-none">
-		<button class="btn btn-outline-secondary" onclick="Cart.clear()">Vider le panier</button>
+		<button class="btn btn-outline-secondary" onclick="window.Cart.clear()">Vider le panier</button>
 		<a href="{{ path('commande_creer') }}" class="btn btn-success">Passer la commande</a>
 	</div>
 {% endblock %}
