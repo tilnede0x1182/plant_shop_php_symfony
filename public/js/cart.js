@@ -174,6 +174,10 @@ class Cart {
 			alert.className = "alert alert-info";
 			alert.textContent = "Votre panier est vide.";
 			container.appendChild(alert);
+			const actions = document.getElementById("cart-actions");
+			if (actions) {
+				actions.classList.add("d-none");
+			}
 			return;
 		}
 
@@ -250,7 +254,7 @@ class Cart {
 // Initialisation
 
 document.addEventListener("DOMContentLoaded", () => {
-  window.Cart = new Cart();
+	window.Cart = new Cart();
 	window.Cart.updateNavbarCount();
 	window.Cart.render();
 });
