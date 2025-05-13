@@ -249,6 +249,91 @@ class Cart {
 			actions.classList.toggle("d-none", Object.keys(cart).length === 0);
 		}
 	}
+
+	/**
+	 * Affiche le récapitulatif de commande dans la page nouvelle commande.
+	 * Remplit aussi le champ masqué pour l'envoi du panier.
+	 *
+	 * @container HTMLElement cible contenant l'affichage de la commande
+	 * @input     Champ hidden HTML pour sérialiser le panier
+	 */
+	renderOrderReview(
+		containerId = "order-review-container",
+		inputId = "order-items-input"
+	) {
+		const container = document.getElementById(containerId);
+		const input = document.getElementById(inputId);
+		if (!container || !input) return;
+
+		const cart = this.get();
+
+		if (Object.keys(cart).length === 0) {
+			const alert = document.createElement("p");
+			alert.className = "alert alert-warning";
+			alert.textContent = "Votre panier est vide.";
+			container.innerHTML = "";
+			container.appendChild(alert);
+			input.value = "";
+			return;
+		}
+
+		const table = document.createElement("table");
+		table.className = "table shadow";
+
+		const thead = document.createElement("thead");
+		const headerRow = document.createElement("tr");
+		["Plante", "Quantité", "Total"].forEach((text) => {
+			const th = document.createElement("th");
+			th.textContent = text;
+			headerRow.appendChild(th);
+		});
+		thead.appendChild(headerRow);
+		table.appendChild(thead);
+
+		const tbody = document.createElement("tbody");
+		let total = 0;
+		const items = [];
+
+		for (const id in cart) {
+			const item = cart[id];
+			const subtotal = item.price * item.quantity;
+			total += subtotal;
+
+			const row = document.createElement("tr");
+
+			const tdName = document.createElement("td");
+			const link = document.createElement("a");
+			link.href = `/plantes/${item.id}`;
+			link.className = "cart-plant-link";
+			link.textContent = item.name;
+			tdName.appendChild(link);
+
+			const tdQty = document.createElement("td");
+			tdQty.textContent = item.quantity;
+
+			const tdTotal = document.createElement("td");
+			tdTotal.textContent = `${subtotal} €`;
+
+			row.appendChild(tdName);
+			row.appendChild(tdQty);
+			row.appendChild(tdTotal);
+
+			tbody.appendChild(row);
+
+			items.push({ plant_id: parseInt(id), quantity: item.quantity });
+		}
+
+		table.appendChild(tbody);
+		container.innerHTML = "";
+		container.appendChild(table);
+
+		const totalEl = document.createElement("p");
+		totalEl.className = "text-end fw-bold";
+		totalEl.textContent = `Total : ${total} €`;
+		container.appendChild(totalEl);
+
+		input.value = JSON.stringify(items);
+	}
 }
 
 // Initialisation

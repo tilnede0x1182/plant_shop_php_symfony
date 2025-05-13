@@ -14,3 +14,13 @@
     <button type="submit" class="btn btn-success w-100 rounded-3">Confirmer la commande</button>
   </form>
 {% endblock %}
+
+{% block javascripts %}
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      if (window.Cart && typeof window.Cart.renderOrderReview === "function") {
+        window.Cart.renderOrderReview();
+      }
+    });
+  </script>
+{% endblock %}
