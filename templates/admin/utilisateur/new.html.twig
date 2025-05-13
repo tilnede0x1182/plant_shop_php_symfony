@@ -1,0 +1,37 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Nouvel utilisateur{% endblock %}
+
+{% block body %}
+  <h1 class="mb-4">Ajouter un utilisateur</h1>
+
+  {{ form_start(userForm) }}
+
+    <div class="mb-3">
+      {{ form_label(userForm.name) }}
+      {{ form_widget(userForm.name, {'attr': {'class': 'form-control'}}) }}
+      {{ form_errors(userForm.name) }}
+    </div>
+
+    <div class="mb-3">
+      {{ form_label(userForm.email) }}
+      {{ form_widget(userForm.email, {'attr': {'class': 'form-control'}}) }}
+      {{ form_errors(userForm.email) }}
+    </div>
+
+    <div class="mb-3">
+      {{ form_label(userForm.plainPassword) }}
+      {{ form_widget(userForm.plainPassword, {'attr': {'class': 'form-control'}}) }}
+      {{ form_errors(userForm.plainPassword) }}
+    </div>
+
+    <div class="form-check mb-3">
+      {{ form_widget(userForm.admin, {'attr': {'class': 'form-check-input'}}) }}
+      {{ form_label(userForm.admin, null, {'label_attr': {'class': 'form-check-label'}}) }}
+      {{ form_errors(userForm.admin) }}
+    </div>
+
+    <button class="btn btn-success">Créer</button>
+
+  {{ form_end(userForm, {'render_rest': false}) }}
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Fiche utilisateur{% endblock %}
+
+{% block body %}
+  <h1 class="mb-4">Fiche utilisateur</h1>
+
+  <div class="card">
+    <div class="card-body">
+      <h5 class="card-title">{{ user.name }}</h5>
+      <p><strong>Email :</strong> {{ user.email }}</p>
+      <p><strong>Administrateur :</strong> {{ user.admin ? 'Oui' : 'Non' }}</p>
+
+      <a href="{{ path('admin_users_edit', { id: user.id }) }}" class="btn btn-warning">Modifier</a>
+      <form method="POST" action="{{ path('admin_users_delete', { id: user.id }) }}" class="d-inline" onsubmit="return confirm('Supprimer ?')">
+        <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ user.id) }}">
+        <button class="btn btn-danger">Supprimer</button>
+      </form>
+    </div>
+  </div>
+{% endblock %}

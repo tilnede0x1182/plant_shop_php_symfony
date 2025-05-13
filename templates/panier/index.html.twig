@@ -1,27 +1,27 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Mon Panier{% endblock %}
+{% block title %}Mon Panier
+{% endblock %}
 
 {% block body %}
-  <h1 class="text-center mb-4">🛒 Mon Panier</h1>
+	<h1 class="text-center mb-4">🛒 Mon Panier</h1>
 
-  {% if app.session.get('alert') %}
-    <div class="alert alert-danger">{{ app.session.get('alert') }}</div>
-  {% endif %}
+	{% if app.session.get('alert') %}
+		<div class="alert alert-danger">{{ app.session.get('alert') }}</div>
+	{% endif %}
 
-  {% if app.session.get('stock_adjust') %}
-    <div class="alert alert-warning mt-2" role="alert"
-         data-stock-adjust='{{ app.session.get('stock_adjust')|json_encode() }}'>
-      Stock ajusté automatiquement sur un ou plusieurs articles.
-    </div>
-  {% endif %}
+	{% if app.session.get('stock_adjust') %}
+		<div class="alert alert-warning mt-2" role="alert" data-stock-adjust='{{ app.session.get('stock_adjust')|json_encode() }}'>
+			Stock ajusté automatiquement sur un ou plusieurs articles.
+		</div>
+	{% endif %}
 
-  <div id="cart-container">
-    <p class="alert alert-info">Chargement du panier...</p>
-  </div>
+	<div id="cart-container">
+		<p class="alert alert-info">Chargement du panier...</p>
+	</div>
 
-  <div class="d-flex justify-content-between mt-4">
-    <button class="btn btn-outline-secondary" onclick="Cart.clear()">Vider le panier</button>
-    <a href="{{ path('commande_creer') }}" class="btn btn-success">Passer la commande</a>
-  </div>
+	<div id="cart-actions" class="d-flex justify-content-between mt-4 d-none">
+		<button class="btn btn-outline-secondary" onclick="Cart.clear()">Vider le panier</button>
+		<a href="{{ path('commande_creer') }}" class="btn btn-success">Passer la commande</a>
+	</div>
 {% endblock %}

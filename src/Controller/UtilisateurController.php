@@ -18,9 +18,20 @@ class UtilisateurController extends AbstractController
 	}
 
 	#[Route('/utilisateurs/{id}/modifier', name: 'utilisateur_modifier')]
-	public function edit(User $utilisateur): Response
+	public function edit(Request $request, User $utilisateur): Response
 	{
 		$this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
-		return $this->render('utilisateur/edit.html.twig', ['utilisateur' => $utilisateur]);
+		$form = $this->createForm(\App\Form\UserType::class, $utilisateur);
+		$form->handleRequest($request);
+
+		if ($form->isSubmitted() && $form->isValid()) {
+			$this->getDoctrine()->getManager()->flush();
+			return $this->redirectToRoute('utilisateur_afficher', ['id' => $utilisateur->getId()]);
+		}
+
+		return $this->render('utilisateur/edit.html.twig', [
+			'userForm' => $form->createView(),
+			'utilisateur' => $utilisateur
+		]);
 	}
 }

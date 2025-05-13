@@ -38,7 +38,7 @@ class UtilisateurController extends AbstractController
 			return $this->redirectToRoute('admin_utilisateurs_index');
 		}
 
-		return $this->render('admin/utilisateur/form.html.twig', [
+		return $this->render('admin/utilisateur/new.html.twig', [
 			'userForm' => $form->createView()
 		]);
 	}
@@ -58,15 +58,11 @@ class UtilisateurController extends AbstractController
 		$form->handleRequest($request);
 
 		if ($form->isSubmitted() && $form->isValid()) {
-			$plainPassword = $form->get('plainPassword')->getData();
-			if ($plainPassword) {
-				$user->setPassword($hasher->hashPassword($user, $plainPassword));
-			}
 			$em->flush();
 			return $this->redirectToRoute('admin_utilisateurs_index');
 		}
 
-		return $this->render('admin/utilisateur/form.html.twig', [
+		return $this->render('admin/utilisateur/edit.html.twig', [
 			'userForm' => $form->createView(),
 			'user' => $user
 		]);

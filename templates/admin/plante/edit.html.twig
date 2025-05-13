@@ -1,29 +1,30 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Modifier la Plante{% endblock %}
+{% block title %}Modifier la Plante
+{% endblock %}
 
 {% block body %}
-  <h1 class="mb-4">Modifier la Plante</h1>
+	<h1 class="mb-4">Modifier la Plante</h1>
 
-  <form method="POST" action="{{ path('admin_plants_update', {id: plant.id}) }}" class="mb-4">
-    {{ form_start(form) }}
-      <div class="mb-3">
-        <label for="name" class="form-label">Nom</label>
-        <input type="text" class="form-control" id="name" name="name" value="{{ plant.name }}">
-      </div>
-      <div class="mb-3">
-        <label for="price" class="form-label">Prix (€)</label>
-        <input type="number" class="form-control" id="price" name="price" value="{{ plant.price }}">
-      </div>
-      <div class="mb-3">
-        <label for="description" class="form-label">Description</label>
-        <textarea class="form-control" id="description" name="description" rows="3">{{ plant.description }}</textarea>
-      </div>
-      <div class="mb-3">
-        <label for="stock" class="form-label">Stock</label>
-        <input type="number" class="form-control" id="stock" name="stock" value="{{ plant.stock }}">
-      </div>
-      <button type="submit" class="btn btn-warning">Mettre à jour</button>
-    {{ form_end(form) }}
-  </form>
+	<form method="POST">
+		{{ form_start(form) }}
+		<div class="mb-3">
+			<label for="name" class="form-label">Nom</label>
+			<input type="text" class="form-control" id="name" name="name" value="{{ plant.name }}">
+		</div>
+		<div class="mb-3">
+			<label for="price" class="form-label">Prix (€)</label>
+			<input type="number" class="form-control" id="price" name="price" value="{{ plant.price }}">
+		</div>
+		<div class="mb-3">
+			<label for="description" class="form-label">Description</label>
+			<textarea class="form-control" id="description" name="description" rows="3">{{ plant.description }}</textarea>
+		</div>
+		<div class="mb-3">
+			<label for="stock" class="form-label">Stock</label>
+			<input type="number" class="form-control" id="stock" name="stock" value="{{ plant.stock }}">
+		</div>
+		<button type="submit" class="btn btn-warning">Mettre à jour</button>
+		{{ form_end(form, {'render_rest': false}) }}
+	</form>
 {% endblock %}
