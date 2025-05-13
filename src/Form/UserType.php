@@ -33,10 +33,7 @@ class UserType extends AbstractType
 				'required' => false,
 				'label' => 'Mot de passe',
 				'attr' => ['autocomplete' => 'new-password'],
-				'constraints' => [
-					new NotBlank(['message' => 'Veuillez saisir un mot de passe']),
-					new Length(['min' => 6, 'minMessage' => 'Le mot de passe doit faire au moins {{ limit }} caractères'])
-				]
+				'constraints' => [],
 			]);
 	}
 

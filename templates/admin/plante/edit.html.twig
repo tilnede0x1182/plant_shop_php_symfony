@@ -1,30 +1,38 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Modifier la Plante
-{% endblock %}
+{% block title %}Modifier la Plante{% endblock %}
 
 {% block body %}
 	<h1 class="mb-4">Modifier la Plante</h1>
 
-	<form method="POST">
-		{{ form_start(form) }}
-		<div class="mb-3">
-			<label for="name" class="form-label">Nom</label>
-			<input type="text" class="form-control" id="name" name="name" value="{{ plant.name }}">
-		</div>
-		<div class="mb-3">
-			<label for="price" class="form-label">Prix (€)</label>
-			<input type="number" class="form-control" id="price" name="price" value="{{ plant.price }}">
-		</div>
-		<div class="mb-3">
-			<label for="description" class="form-label">Description</label>
-			<textarea class="form-control" id="description" name="description" rows="3">{{ plant.description }}</textarea>
-		</div>
-		<div class="mb-3">
-			<label for="stock" class="form-label">Stock</label>
-			<input type="number" class="form-control" id="stock" name="stock" value="{{ plant.stock }}">
-		</div>
-		<button type="submit" class="btn btn-warning">Mettre à jour</button>
-		{{ form_end(form, {'render_rest': false}) }}
-	</form>
+	{{ form_start(form) }}
+
+	<div class="mb-3">
+		{{ form_label(form.name) }}
+		{{ form_widget(form.name, {'attr': {'class': 'form-control'}}) }}
+		{{ form_errors(form.name) }}
+	</div>
+
+	<div class="mb-3">
+		{{ form_label(form.price) }}
+		{{ form_widget(form.price, {'attr': {'class': 'form-control'}}) }}
+		{{ form_errors(form.price) }}
+	</div>
+
+	<div class="mb-3">
+		{{ form_label(form.description) }}
+		{{ form_widget(form.description, {'attr': {'class': 'form-control'}}) }}
+		{{ form_errors(form.description) }}
+	</div>
+
+	<div class="mb-3">
+		{{ form_label(form.stock) }}
+		{{ form_widget(form.stock, {'attr': {'class': 'form-control'}}) }}
+		{{ form_errors(form.stock) }}
+	</div>
+
+	<button type="submit" class="btn btn-warning">Mettre à jour</button>
+
+	{{ form_widget(form._token) }}
+	{{ form_end(form, {'render_rest': false}) }}
 {% endblock %}

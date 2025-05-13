@@ -5,23 +5,34 @@
 {% block body %}
 	<h1 class="mb-4">Ajouter une Nouvelle Plante</h1>
 
-{{ form_start(form, {'method': 'POST'}) }}
+	{{ form_start(form, {'method': 'POST'}) }}
+
 	<div class="mb-3">
-		<label for="name" class="form-label">Nom</label>
-		<input type="text" class="form-control" id="name" name="name" value="{{ form.name.vars.value }}">
+		{{ form_label(form.name) }}
+		{{ form_widget(form.name, {'attr': {'class': 'form-control'}}) }}
+		{{ form_errors(form.name) }}
 	</div>
+
 	<div class="mb-3">
-		<label for="price" class="form-label">Prix (€)</label>
-		<input type="number" class="form-control" id="price" name="price" value="{{ form.price.vars.value }}">
+		{{ form_label(form.price) }}
+		{{ form_widget(form.price, {'attr': {'class': 'form-control'}}) }}
+		{{ form_errors(form.price) }}
 	</div>
+
 	<div class="mb-3">
-		<label for="description" class="form-label">Description</label>
-		<textarea class="form-control" id="description" name="description" rows="3">{{ form.description.vars.value }}</textarea>
+		{{ form_label(form.description) }}
+		{{ form_widget(form.description, {'attr': {'class': 'form-control'}}) }}
+		{{ form_errors(form.description) }}
 	</div>
+
 	<div class="mb-3">
-		<label for="stock" class="form-label">Stock</label>
-		<input type="number" class="form-control" id="stock" name="stock" value="{{ form.stock.vars.value }}">
+		{{ form_label(form.stock) }}
+		{{ form_widget(form.stock, {'attr': {'class': 'form-control'}}) }}
+		{{ form_errors(form.stock) }}
 	</div>
+
 	<button type="submit" class="btn btn-success">Créer</button>
+
+	{{ form_widget(form._token) }}
 	{{ form_end(form, {'render_rest': false}) }}
 {% endblock %}

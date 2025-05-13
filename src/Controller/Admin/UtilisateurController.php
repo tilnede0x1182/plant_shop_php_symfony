@@ -55,6 +55,7 @@ class UtilisateurController extends AbstractController
 	public function edit(User $user, Request $request, EntityManagerInterface $em, UserPasswordHasherInterface $hasher): Response
 	{
 		$form = $this->createForm(UserType::class, $user);
+		$form->remove('plainPassword');
 		$form->handleRequest($request);
 
 		if ($form->isSubmitted() && $form->isValid()) {

@@ -1,31 +1,33 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Modifier l'utilisateur{% endblock %}
+{% block title %}Modifier l'utilisateur
+{% endblock %}
 
 {% block body %}
-  <h1 class="mb-4">Modifier l'utilisateur</h1>
+	<h1 class="mb-4">Modifier l'utilisateur</h1>
 
-  {{ form_start(userForm) }}
+	{{ form_start(userForm) }}
 
-    <div class="mb-3">
-      {{ form_label(userForm.name) }}
-      {{ form_widget(userForm.name, {'attr': {'class': 'form-control'}}) }}
-      {{ form_errors(userForm.name) }}
-    </div>
+	<div class="mb-3">
+		{{ form_label(userForm.name) }}
+		{{ form_widget(userForm.name, {'attr': {'class': 'form-control'}}) }}
+		{{ form_errors(userForm.name) }}
+	</div>
 
-    <div class="mb-3">
-      {{ form_label(userForm.email) }}
-      {{ form_widget(userForm.email, {'attr': {'class': 'form-control'}}) }}
-      {{ form_errors(userForm.email) }}
-    </div>
+	<div class="mb-3">
+		{{ form_label(userForm.email) }}
+		{{ form_widget(userForm.email, {'attr': {'class': 'form-control'}}) }}
+		{{ form_errors(userForm.email) }}
+	</div>
 
-    <div class="form-check mb-3">
-      {{ form_widget(userForm.admin, {'attr': {'class': 'form-check-input'}}) }}
-      {{ form_label(userForm.admin, null, {'label_attr': {'class': 'form-check-label'}}) }}
-      {{ form_errors(userForm.admin) }}
-    </div>
+	<div class="form-check mb-3">
+		{{ form_widget(userForm.admin, {'attr': {'class': 'form-check-input'}}) }}
+		{{ form_label(userForm.admin, null, {'label_attr': {'class': 'form-check-label'}}) }}
+		{{ form_errors(userForm.admin) }}
+	</div>
 
-    <button class="btn btn-warning">Mettre à jour</button>
+	<button class="btn btn-warning">Mettre à jour</button>
 
-  {{ form_end(userForm, {'render_rest': false}) }}
+	{{ form_rest(userForm) }}
+	{{ form_end(userForm) }}
 {% endblock %}
