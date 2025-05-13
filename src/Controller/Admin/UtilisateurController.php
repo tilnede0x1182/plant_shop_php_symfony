@@ -17,7 +17,7 @@ class UtilisateurController extends AbstractController
 	#[Route('', name: 'admin_utilisateurs_index')]
 	public function index(EntityManagerInterface $em): Response
 	{
-		$users = $em->getRepository(User::class)->findAll();
+		$users = $em->getRepository(User::class)->findBy([], ['admin' => 'DESC', 'name' => 'ASC']);
 		return $this->render('admin/utilisateur/index.html.twig', ['users' => $users]);
 	}
 

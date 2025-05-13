@@ -16,7 +16,7 @@ class PlanteController extends AbstractController
 	#[Route('', name: 'admin_plantes_index')]
 	public function index(EntityManagerInterface $gestionnaire): Response
 	{
-		$plantes = $gestionnaire->getRepository(Plant::class)->findAll();
+		$plantes = $gestionnaire->getRepository(Plant::class)->findBy([], ['name' => 'ASC']);
 		return $this->render('admin/plante/index.html.twig', ['plantes' => $plantes]);
 	}
 
