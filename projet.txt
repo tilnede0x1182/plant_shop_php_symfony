@@ -1173,7 +1173,7 @@ class CommandeController extends AbstractController
 		$gestionnaire->flush();
 		$requete->getSession()->remove('panier');
 		$this->addFlash('success', 'Commande enregistrée avec succès.');
-		return $this->redirectToRoute('commande_creer', ['success' => true]);
+		return $this->redirectToRoute('commandes_index');
 	}
 }
 
@@ -1722,10 +1722,9 @@ class UserType extends AbstractType
 			{% block title %}PlantShop
 			{% endblock %}
 		</title>
+		<link rel="icon" href="/favicon.ico">
 		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-		<link
-		rel="stylesheet" href="/css/custom.css">
-	{# Votre CSS personnalisé #}
+		<link rel="stylesheet" href="/css/custom.css">
 	</head>
 	<body class="bg-light">
 		{% include 'partials/_navbar.html.twig' %}
@@ -1775,7 +1774,7 @@ class UserType extends AbstractType
 		<div class="list-group">
 			{% for order in orders %}
 				<div class="list-group-item">
-					<h5 class="mb-1">Commande n°{{ loop.index }}</h5>
+					<h5 class="mb-1">Commande n°{{ orders|length - loop.index + 1 }}</h5>
 					<p class="text-muted mb-1">Passée le
 						{{ order.createdAt|date('d/m/Y H:i') }}
 						— Total :
@@ -1784,7 +1783,7 @@ class UserType extends AbstractType
 					<ul class="mb-2">
 						{% for item in order.articles %}
 							<li>
-								<a href="{{ path('plants_show', { id: item.plant.id }) }}">{{ item.plant.name }}</a>
+								<a href="{{ path('plante_afficher', { id: item.plant.id }) }}">{{ item.plant.name }}</a>
 								×
 								{{ item.quantity }}
 								–
@@ -2481,6 +2480,12 @@ document.addEventListener("DOMContentLoaded", () => {
 	window.Cart = new Cart();
 	window.Cart.updateNavbarCount();
 	window.Cart.render();
+
+  // Vide le panier si succès détecté via flash
+	if (document.querySelector('.alert-success')) {
+		window.Cart.clear();
+    window.Cart.updateNavbarCount();
+	}
 });
 
 
@@ -2565,12 +2570,14 @@ document.addEventListener("DOMContentLoaded", () => {
 │   ├── objects/
 │   │   ├── 01/
 │   │   │   ├── 4a85e1b0b38760d281a42ba7078576482b34cf
+│   │   │   ├── 550e5a1db348525c652f820848174ac859a8c7
 │   │   │   └── c2a64bc828fdb49d884f52ee7a6f684bbedef0
 │   │   ├── 03/
 │   │   │   ├── 267ce159d47627fd7aa1082ca34f2cd755e9ea
 │   │   │   ├── 5de27b7ab2e0afda4a424291aa37e3a81c3534
 │   │   │   └── d9e07ca1011cc8d3b732ddf783559aaf9bac1f
 │   │   ├── 04/
+│   │   │   ├── 100bc5f4868b816188a1f5f907b41bbea87fcd
 │   │   │   ├── 2e44828c3ecd2d0b35d0d04b6c19733e23e2ba
 │   │   │   └── 9d24ed966cf7b18fcfb5e60e0934599601f7ce
 │   │   ├── 05/
@@ -2621,6 +2628,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 3bc4eaa2ae859ae54fd9f7d1d88ac4d9de307c
 │   │   │   └── f0c6d42a336d756fb5ebd0ae9c9b889e23ef0d
 │   │   ├── 17/
+│   │   │   ├── 1ac8b458333e847e6ac963ea5c5ac74c794115
 │   │   │   └── 912f2c07ec8150293309ecc146c23eb31582eb
 │   │   ├── 18/
 │   │   │   ├── 2b8ed21060be17f6e4090de0327cb58c0d588b
@@ -2636,6 +2644,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 1d/
 │   │   │   └── 5e23bb76b1fa9dc92f047bd4b10a7848c27514
 │   │   ├── 1e/
+│   │   │   ├── 812bec55e1b301fa540d809421434ce465b7b1
 │   │   │   └── c6792e5a4caa70f0cdb38b7571a4e7bff2c5bc
 │   │   ├── 20/
 │   │   │   ├── 04d444a635085b8f54fd25765eda760c0a2e19
@@ -2661,6 +2670,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── de3c7752beb48cb0bbd1c81972086e3d18e28d
 │   │   ├── 27/
 │   │   │   └── 57a8bf52fff502663ce9859509a210ce2b1018
+│   │   ├── 28/
+│   │   │   └── 0140c93abc5c4c9eef40c60f552299b2161fd5
 │   │   ├── 29/
 │   │   │   ├── 231d94bd1afd6f35b3c1e64687640d3f1e2f50
 │   │   │   ├── dcd3d35360b1b2c3030711b3af05a0c6135985
@@ -2675,6 +2686,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── e194ffe7ac74f32329d59f46a5f7b6014fd9c8
 │   │   ├── 2d/
 │   │   │   └── 6a76f94dce138741e2d63ae83a11c1879031d9
+│   │   ├── 2e/
+│   │   │   └── 6afe2de87841c5ebcbc0c144c9558af9a8fbf2
 │   │   ├── 2f/
 │   │   │   ├── 21c45aa9354f281734d0d757293cbb0b275730
 │   │   │   └── da3a619c96fa30349fccb688de4086fc39cf1a
@@ -2713,7 +2726,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── e538359351351fa6b50885cdbbee1a23aaa32a
 │   │   ├── 3d/
 │   │   │   ├── 36f7f5211c440fecfe349015b670ab1369b7f7
-│   │   │   └── a75f4442364e14784706a46f911c138a3f20ea
+│   │   │   ├── a75f4442364e14784706a46f911c138a3f20ea
+│   │   │   └── f6f6a3ea72659f5175311cd2e3445953838920
 │   │   ├── 3e/
 │   │   │   └── 1f6038f42636f80c4e1a3c8c96640a21fa39ca
 │   │   ├── 3f/
@@ -2721,6 +2735,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 81e29bb35b7ed9e65bd6f3b7418f8f96ad1cec
 │   │   │   └── 9a603b67e443029a0e904647ce653896b0b6e2
 │   │   ├── 40/
+│   │   │   ├── 7a3da170f8ea85f6e9a09ada52efed34448083
 │   │   │   ├── 98bf9bb8d42205c27d23b92a29d00e30cc919a
 │   │   │   └── d40405e1e9651723b0169bac8f1a36489021ea
 │   │   ├── 41/
@@ -2735,15 +2750,21 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── 277629cd6b0bbb5192b68db86f0036a8fda5e2
 │   │   ├── 46/
 │   │   │   └── 44127bac354e10fa5c2fba373db6001f59c7dc
+│   │   ├── 47/
+│   │   │   └── e6c1d083deedf8e44c68736536b9f2cf0b3b75
 │   │   ├── 48/
 │   │   │   └── f2ca42b44fa6338b95f9c78b816a23b160021f
 │   │   ├── 49/
 │   │   │   └── 6f5e6e9afef860be3d3aaead4d9a8e2c627409
 │   │   ├── 4a/
 │   │   │   └── a05d908ce72ae4ed14819726e1d65854ce4a60
+│   │   ├── 4b/
+│   │   │   └── 7656afe5b47bfb5329641a52a861ceb51632c3
 │   │   ├── 4c/
 │   │   │   ├── 4d59dccc48d5f9274d92f39000298173750db4
 │   │   │   └── 96134f6cb6dddc4fee28287a16a076d47b53a6
+│   │   ├── 4d/
+│   │   │   └── e0cd48c73321e515ec488952dde6b7ca793218
 │   │   ├── 4e/
 │   │   │   └── efe1537cefc8499226365c0483b0f534ad7022
 │   │   ├── 4f/
@@ -2780,14 +2801,19 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── c38c185e130ca20faf1946627e408b92a9f7ff
 │   │   │   ├── dcaed61f41abb1e2a70d57a55eeb7c6f1c2eda
 │   │   │   └── f85ee24ec8a16d402406e9a1b92a8e34bda70e
+│   │   ├── 5c/
+│   │   │   └── b1220f7c5556d18e4c6de763193e39d5a36c5a
 │   │   ├── 5d/
 │   │   │   └── f021e3c3703ed6ca92c9bda6fcec77c5bf29b7
 │   │   ├── 5e/
 │   │   │   └── bcdb2153c870e7d915f3b3fcdd55821424284c
+│   │   ├── 5f/
+│   │   │   └── 0f64775b9a57e2ef664988bf9e9648dbf47fec
 │   │   ├── 60/
 │   │   │   ├── 16958594c84a5d8425fcc76e62bb4d1fb663c9
 │   │   │   └── 236aefeb2ecdc785e27ff419b275baaf27f6b1
 │   │   ├── 61/
+│   │   │   ├── 9dbdec24d32a20db66b0d6a99ac99a4ac105e3
 │   │   │   ├── af2732aed0d33e53acd2caebd80f3ff9b2025c
 │   │   │   └── e2efb36cdbf8f1c1b885161171432996ea2ed2
 │   │   ├── 62/
@@ -2824,6 +2850,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── 69374a07c0b18cf928242c323e985ea379d593
 │   │   ├── 6c/
 │   │   │   ├── 03bb5f2165830323d3bdfe99612c4731a5d35d
+│   │   │   ├── 09938884945476bf2ee414796a6571ce619fee
 │   │   │   ├── 623f3080fb2225ca27e43b980997f9e2a4efc1
 │   │   │   ├── 7ba56aa2a1e46674ce74f0b6285a4e3a70824b
 │   │   │   ├── 89ceacf33a3c1bc0d89e9ee301301fecf08c38
@@ -2852,6 +2879,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── 8d17663d679d1fb495b225cc45eab3950f52e7
 │   │   ├── 74/
 │   │   │   └── 1fee830f7691c7090008eddeba68cb20c86a77
+│   │   ├── 75/
+│   │   │   └── ac0887300993590d415337d395f5aa41b73406
 │   │   ├── 76/
 │   │   │   ├── 1686716edcc8aa0a90d0d690ee94b8001063d3
 │   │   │   └── b882f998d94561aea31c0434b282259564608d
@@ -2891,6 +2920,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 55b47da5412a3e27720111cce668773d4b76f9
 │   │   │   └── e3a754b6a0fcb238b03c0e47d05219fbf9cf89
 │   │   ├── 83/
+│   │   │   ├── 0221658a2c36b02e4b44735e55717debe899df
 │   │   │   └── 0580f237ede3f6505ec449dbd3186bf755c868
 │   │   ├── 84/
 │   │   │   └── 4bfd70e829f2b566b8e36a15348d3768bb75c0
@@ -2926,11 +2956,14 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── e92aad6bdafcac3aade615171fdf331bc2d3a5
 │   │   ├── 8e/
 │   │   │   └── efd71f41972c106a66c4eaad9b66295d13ef78
+│   │   ├── 90/
+│   │   │   └── 9e83d6187c429d96d9574b444cad49edb26f0f
 │   │   ├── 91/
 │   │   │   ├── 069dff2d127bba5d1baa8d5db600c69f8c3c66
 │   │   │   ├── 141b0639148f8ad934cc2871d08923df4ff75b
 │   │   │   ├── 70a4105a0c6f0dd9d8f585d35360848073dbaa
 │   │   │   ├── 75c72d2b58eb85ef5399f66a22eeb629cb40f3
+│   │   │   ├── 811ba4deaf652e1ad0e2852a2a099c5e128ee6
 │   │   │   └── 91abbfb1b35a1c9ccdef722e2edf853e960963
 │   │   ├── 94/
 │   │   │   ├── 203f35c8fba1603bd1ef253d7fa710783c1c14
@@ -2938,6 +2971,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── bd0984b15464de3bb077c38f35335fca8eae8b
 │   │   ├── 95/
 │   │   │   ├── 59ceee35b522b1fc000f53d380026d1e5a76d9
+│   │   │   ├── 6150e0ea1f453f30c50f45d379034b3d2c8052
+│   │   │   ├── 8c07dad1740c1c9633d6b0c10a1a80b1928cca
 │   │   │   ├── 9f2c589806087100a3780025b473cb1d750d84
 │   │   │   └── d2768bba86f7fa142d91dac3e461d34ecfd4a2
 │   │   ├── 96/
@@ -2982,11 +3017,13 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 3edd0f47bb15629c299ea8fcae16d3bd2970db
 │   │   │   └── 6122a3756cbd9c4225241f338191fc2e56f752
 │   │   ├── a5/
+│   │   │   ├── 26a9013bfd1f7bf69ede5755286322345a2a9c
 │   │   │   └── 921324594c1c162d14746dc586256407e82d28
 │   │   ├── a6/
 │   │   │   ├── 7f91e25c268247e2034877873a2b27f37619f0
 │   │   │   └── 9d3d1dea4e4f065d8cf4b8df682b787f65064c
 │   │   ├── a7/
+│   │   │   ├── 28b6dcde416990828643335b41aeb5505de640
 │   │   │   ├── 2d3c8571c00912d46a5dafffdd540e5e9046ca
 │   │   │   ├── 33a9c5e724b096e5bf63f46b4c797b7b2eca53
 │   │   │   └── a3864876bf7b9ce15d08486d900bd773913312
@@ -3001,6 +3038,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── ab/
 │   │   │   └── 1a6379122e3fa1b504be6704d8fd22491a2872
 │   │   ├── ac/
+│   │   │   ├── 19adb4790e6cdc62817180fdbfae30e052c1cf
 │   │   │   ├── 3e5dff35a31c5f002928d561646cd2943f0962
 │   │   │   └── c2abfc099da78ed06c15decaa017e816ce990c
 │   │   ├── ad/
@@ -3032,12 +3070,14 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── b7/
 │   │   │   └── 59e370c3d4633a93011e90597ef6a3ffdadc32
 │   │   ├── b8/
-│   │   │   └── 6b977d6be01c5bfc7137c6a64b165ec436c9e6
+│   │   │   ├── 6b977d6be01c5bfc7137c6a64b165ec436c9e6
+│   │   │   └── f6f633e34a146f9ee7be29eb74b69942c9b906
 │   │   ├── b9/
 │   │   │   ├── 47b6eb8530aef35c41a4ed006d7d59b2384fc8
 │   │   │   └── 4f89123cf268d05e67a8779a4d0a63085ae612
 │   │   ├── ba/
 │   │   │   ├── 811479186d5a21612698e4d7546e6406fe31c9
+│   │   │   ├── 93794d86cc6c3a22af968ba641b0eed938cc21
 │   │   │   └── ad5689e8458ab3bb94465453c410a6928dd9c9
 │   │   ├── bb/
 │   │   │   ├── 095261620a1b567b40ccd35aebb164c9933a6f
@@ -3060,10 +3100,12 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 2dd27772ff377b1f570c7d5adb36883b48ebe8
 │   │   │   └── fa590d8dca1cc3298aa2ca791f04d794e3744e
 │   │   ├── c1/
+│   │   │   ├── 4cd5e9be974c0f27eb731a12cd4a9e22d736c3
 │   │   │   └── ce59cf5841aaca1e612458acf78d7b99526d17
 │   │   ├── c2/
 │   │   │   ├── 17c337122f613e1e0dfece6f576193d312fa60
-│   │   │   └── 414007691ac7644c05cd40b4df3227d6998033
+│   │   │   ├── 414007691ac7644c05cd40b4df3227d6998033
+│   │   │   └── 81d2ccdf1d0303ac9efaab6d90a58838c25e56
 │   │   ├── c3/
 │   │   │   └── 066f5f2e35811065d2bdeb0a02871503ac2993
 │   │   ├── c5/
@@ -3072,10 +3114,12 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 496325097747860e075748a387e51010f0926f
 │   │   │   └── 612b0ad1957ade3aeb03176f49da20cda51469
 │   │   ├── c7/
-│   │   │   └── 7d36281e10b2af45acba498d96bae652707cc0
+│   │   │   ├── 7d36281e10b2af45acba498d96bae652707cc0
+│   │   │   └── 8328f32363a2ef6ec1d99c9592046d77410d4e
 │   │   ├── c8/
 │   │   │   ├── b060154058cb19d3bd5dccec2dc14a109664e7
-│   │   │   └── b7d690b200ecc8179c1e9663379247a201d43b
+│   │   │   ├── b7d690b200ecc8179c1e9663379247a201d43b
+│   │   │   └── c98dd31ba45bf75b8571b73df5756f9faa9668
 │   │   ├── c9/
 │   │   │   └── b0f7bc8cf51f968a643d4d9fec668eb8618ee6
 │   │   ├── ca/
@@ -3111,6 +3155,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── d2f9ec0ce45209e9be89e5aa447745656607e1
 │   │   │   └── de64c6679aeacf0b9b83945bb38b7ee7f4fdcf
 │   │   ├── d6/
+│   │   │   ├── 442bda6ba3c1074f218f300e03c9cf8da11bb9
 │   │   │   ├── 6f22415ba3b6c1576d31232ecc70b0e3968076
 │   │   │   └── d66dcd0eb00eecf282843c7336670e752cd240
 │   │   ├── d8/
@@ -3122,7 +3167,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── db/
 │   │   │   └── 843dd107beb1e05478b77097f3ee6438af9be3
 │   │   ├── dc/
-│   │   │   └── 2bcee6b679423923f424a0f969b90ea9a34f81
+│   │   │   ├── 2bcee6b679423923f424a0f969b90ea9a34f81
+│   │   │   └── bfec8b58ae86f378085bbc728d165ff969c82c
 │   │   ├── dd/
 │   │   │   ├── 3575773fca950f93429a5f25c62f6e92bb0e95
 │   │   │   ├── 47a6ad82a8ecc3adc7dd22262ebe27b4b10534
@@ -3133,7 +3179,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── df/
 │   │   │   └── a0b53527f1e5695357071f45c8d0dfbed67d87
 │   │   ├── e0/
-│   │   │   └── 8f52ffbd646212f865c877ac74058737a40611
+│   │   │   ├── 8f52ffbd646212f865c877ac74058737a40611
+│   │   │   └── ec22e0a3549f10eae6de49119a19a2effa6579
 │   │   ├── e2/
 │   │   │   └── bead1a38d94ae4a700f2f100e925cdafbcc35a
 │   │   ├── e3/
@@ -3151,11 +3198,16 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── ea/
 │   │   │   └── b670f9f31696542632f69cab80c90491dc7b65
 │   │   ├── eb/
-│   │   │   └── 13d2a8358189e71c79a8630b430556f694973c
+│   │   │   ├── 13d2a8358189e71c79a8630b430556f694973c
+│   │   │   └── 19318bdb738929a90533c891c21532d9e56cdf
+│   │   ├── ec/
+│   │   │   └── 76e503139510170be204644533108524007a72
 │   │   ├── ed/
 │   │   │   ├── 2fe51e29ee4768228d56ce2cbc9c466a7c7909
 │   │   │   ├── 35f3f3a06e2da27d36049ab581888c50afb7b2
 │   │   │   └── 6c28624c4bbc8667453b1b9b09ec893b95b9b8
+│   │   ├── ee/
+│   │   │   └── a9c819b65a796754db40f10a1bd1fcdd432254
 │   │   ├── ef/
 │   │   │   └── 4fda616cd4b19c642096fcbad18ed40ac4bfd5
 │   │   ├── f0/
@@ -3185,10 +3237,12 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 4bbd09239237bce6ba8cff480ccdc69970f344
 │   │   │   └── 9e08d07b65bbab1c93d39650e7dc3505595b8f
 │   │   ├── f8/
-│   │   │   └── 53be15cf348ec1b6caaff738de0153eb9eeef0
+│   │   │   ├── 53be15cf348ec1b6caaff738de0153eb9eeef0
+│   │   │   └── 93708232badcf87397256e38b4f5500dd81e80
 │   │   ├── fa/
 │   │   │   ├── 7595bcd614d32ad3e8c4a367afff48ca11e343
 │   │   │   ├── 892ed21a09e47cd836261864e112fb2f1e4459
+│   │   │   ├── 8e999d06e96ff73ac85fdbd891166cf55bc31a
 │   │   │   ├── 92c7138fdb5aadee16e90196edf6b63c268374
 │   │   │   └── b5ada70f2dccc1e72c84d17db473e470324433
 │   │   ├── fb/
@@ -3219,10 +3273,13 @@ document.addEventListener("DOMContentLoaded", () => {
 ├── public/
 │   ├── css/
 │   │   └── custom.css
+│   ├── favicon.ico
 │   ├── index.php
-│   └── js/
-│       ├── cart.js
-│       └── commande.js
+│   ├── js/
+│   │   ├── cart.js
+│   │   └── commande.js
+│   └── logo_organisé.ico:Zone.Identifier
+├── README.md
 ├── src/
 │   ├── Command/
 │   │   ├── SeedDevCommand.php
@@ -3291,4 +3348,4 @@ document.addEventListener("DOMContentLoaded", () => {
 │       └── show.html.twig
 └── users.txt
 
-254 directories, 536 files
+265 directories, 577 files
