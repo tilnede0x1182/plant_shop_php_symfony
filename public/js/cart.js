@@ -81,7 +81,6 @@ class Cart {
 		}
 	}
 
-
 	/**
 	 * Met à jour la quantité d'un produit dans le panier.
 	 *
