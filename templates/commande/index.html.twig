@@ -1,26 +1,39 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Mes commandes{% endblock %}
+{% block title %}Mes commandes
+{% endblock %}
 
 {% block body %}
-  <h1 class="text-center mb-4">📜 Mes commandes</h1>
+	<h1 class="text-center mb-4">📜 Mes commandes</h1>
 
-  {% if orders is empty %}
-    <p class="alert alert-info">Aucune commande.</p>
-  {% else %}
-    <div class="list-group">
-      {% for order in orders %}
-        <div class="list-group-item">
-          <h5 class="mb-1">Commande n°{{ loop.index }}</h5>
-          <p class="text-muted mb-1">Passée le {{ order.createdAt|date('d/m/Y H:i') }} — Total : {{ order.totalPrice }} €</p>
-          <ul class="mb-2">
-            {% for item in order.articles %}
-              <li>{{ item.plant.name }} × {{ item.quantity }} – {{ item.plant.price }} €</li>
-            {% endfor %}
-          </ul>
-          <p><strong>Statut :</strong> {{ order.status }}</p>
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
+	{% if orders is empty %}
+		<p class="alert alert-info">Aucune commande.</p>
+	{% else %}
+		<div class="list-group">
+			{% for order in orders %}
+				<div class="list-group-item">
+					<h5 class="mb-1">Commande n°{{ orders|length - loop.index + 1 }}</h5>
+					<p class="text-muted mb-1">Passée le
+						{{ order.createdAt|date('d/m/Y H:i') }}
+						— Total :
+						{{ order.totalPrice }}
+						€</p>
+					<ul class="mb-2">
+						{% for item in order.articles %}
+							<li>
+								<a href="{{ path('plante_afficher', { id: item.plant.id }) }}">{{ item.plant.name }}</a>
+								×
+								{{ item.quantity }}
+								–
+								{{ item.plant.price }}
+								€</li>
+						{% endfor %}
+					</ul>
+					<p>
+						<strong>Statut :</strong>
+						{{ order.status }}</p>
+				</div>
+			{% endfor %}
+		</div>
+	{% endif %}
 {% endblock %}

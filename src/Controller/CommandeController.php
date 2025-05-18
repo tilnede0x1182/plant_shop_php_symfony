@@ -21,7 +21,8 @@ class CommandeController extends AbstractController
 	{
 		/** @var \App\Entity\User $utilisateur */
 		$utilisateur = $this->getUser();
-		$commandes = $utilisateur->getCommandes();
+		$commandes = $utilisateur->getCommandes()->toArray();
+		usort($commandes, fn($a, $b) => $b->getCreatedAt() <=> $a->getCreatedAt());
 
 		return $this->render('commande/index.html.twig', ['orders' => $commandes]);
 	}
@@ -33,7 +34,7 @@ class CommandeController extends AbstractController
 		return $this->render('commande/new.html.twig');
 	}
 
-	#[Route('/commandes', name: 'commande_enregistrer', methods: ['POST'])]
+	#[Route('/commandes/enregistrer', name: 'commande_enregistrer', methods: ['POST'])]
 	public function store(Request $requete, EntityManagerInterface $gestionnaire, PlantRepository $repo, LoggerInterface $logger): Response
 	{
 		$logger->info('CommandeController::store appelé', [
@@ -55,6 +56,10 @@ class CommandeController extends AbstractController
 		}
 		foreach ($donnees as $ligne) {
 			$plante = $repo->find($ligne['plant_id']);
+			if (!$plante) {
+				$logger->error("Plante ID {$ligne['plant_id']} introuvable.");
+				continue;
+			}
 			if ($plante->getStock() < $ligne['quantity']) {
 				return $this->redirectToRoute('commande_creer', [], Response::HTTP_SEE_OTHER);
 			}
@@ -68,6 +73,7 @@ class CommandeController extends AbstractController
 		}
 		$commande->setTotalPrice($total); // Mise à jour du total calculé
 		$gestionnaire->flush();
+		$requete->getSession()->remove('panier');
 		$this->addFlash('success', 'Commande enregistrée avec succès.');
 		return $this->redirectToRoute('commande_creer', ['success' => true]);
 	}

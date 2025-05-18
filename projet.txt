@@ -62,17 +62,6 @@ when@test:
         strict_variables: true
 
 
-# config/packages/monolog.yaml
-
-monolog:
-    handlers:
-        doctrine:
-            type: stream
-            path: '%kernel.logs_dir%/doctrine.log'
-            level: debug
-            channels: [doctrine]
-
-
 # config/packages/routing.yaml
 
 framework:
@@ -247,6 +236,23 @@ framework:
             - submit
             - authenticate
             - logout
+
+
+# config/packages/dev/monolog.yaml
+
+monolog:
+    handlers:
+        main:
+            type: stream
+            path: '%kernel.logs_dir%/%kernel.environment%.log'
+            level: debug
+            channels: ["!event"]
+
+        doctrine:
+            type: stream
+            path: '%kernel.logs_dir%/doctrine.log'
+            level: debug
+            channels: [doctrine]
 
 
 # config/packages/cache.yaml
@@ -610,7 +616,7 @@ class OrderItem
 	private ?Order $commande = null;
 
 	#[ORM\ManyToOne(inversedBy: 'articles')]
-	#[ORM\JoinColumn(nullable: false)]
+	#[ORM\JoinColumn(name: 'plant_id', referencedColumnName: 'id', nullable: false)]
 	private ?Plant $plant = null;
 
 	#[ORM\Column(type: 'integer')]
@@ -688,7 +694,7 @@ class Plant
 	#[ORM\Column(type: 'integer')]
 	private int $stock;
 
-	#[ORM\OneToMany(mappedBy: 'plante', targetEntity: OrderItem::class, orphanRemoval: true)]
+	#[ORM\OneToMany(mappedBy: 'plant', targetEntity: OrderItem::class, orphanRemoval: true)]
 	private Collection $articles;
 
 	public function __construct()
@@ -757,7 +763,7 @@ class Plant
 	{
 		if (!$this->articles->contains($item)) {
 			$this->articles[] = $item;
-			$item->setPlante($this);
+			$item->setPlant($this);
 		}
 		return $this;
 	}
@@ -765,8 +771,8 @@ class Plant
 	public function removeArticle(OrderItem $item): self
 	{
 		if ($this->articles->removeElement($item)) {
-			if ($item->getPlante() === $this) {
-				$item->setPlante(null);
+			if ($item->getPlant() === $this) {
+				$item->setPlant(null);
 			}
 		}
 		return $this;
@@ -1096,9 +1102,8 @@ namespace App\Controller;
 
 use App\Entity\Order;
 use App\Entity\OrderItem;
-use App\Entity\Plante;
 use Psr\Log\LoggerInterface;
-use App\Repository\PlanteRepository;
+use App\Repository\PlantRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -1112,8 +1117,10 @@ class CommandeController extends AbstractController
 	#[Route('/commandes', name: 'commandes_index')]
 	public function index(): Response
 	{
+		/** @var \App\Entity\User $utilisateur */
 		$utilisateur = $this->getUser();
-		$commandes = $utilisateur->getCommandes();
+		$commandes = $utilisateur->getCommandes()->toArray();
+		usort($commandes, fn($a, $b) => $b->getCreatedAt() <=> $a->getCreatedAt());
 
 		return $this->render('commande/index.html.twig', ['orders' => $commandes]);
 	}
@@ -1125,14 +1132,14 @@ class CommandeController extends AbstractController
 		return $this->render('commande/new.html.twig');
 	}
 
-	#[Route('/commandes', name: 'commande_enregistrer', methods: ['POST'])]
-	public function store(Request $requete, EntityManagerInterface $gestionnaire, PlanteRepository $repo, LoggerInterface $logger): Response
+	#[Route('/commandes/enregistrer', name: 'commande_enregistrer', methods: ['POST'])]
+	public function store(Request $requete, EntityManagerInterface $gestionnaire, PlantRepository $repo, LoggerInterface $logger): Response
 	{
 		$logger->info('CommandeController::store appelé', [
 			'request_items' => $requete->get('items')
 		]);
 		$donnees = json_decode($requete->get('items'), true);
-		$this->get('logger')->info('Items reçus : ' . print_r($donnees, true));
+		$logger->info('Items reçus : ' . print_r($donnees, true));
 		$total = 0;
 
 		$commande = new Order();
@@ -1147,6 +1154,10 @@ class CommandeController extends AbstractController
 		}
 		foreach ($donnees as $ligne) {
 			$plante = $repo->find($ligne['plant_id']);
+			if (!$plante) {
+				$logger->error("Plante ID {$ligne['plant_id']} introuvable.");
+				continue;
+			}
 			if ($plante->getStock() < $ligne['quantity']) {
 				return $this->redirectToRoute('commande_creer', [], Response::HTTP_SEE_OTHER);
 			}
@@ -1160,6 +1171,7 @@ class CommandeController extends AbstractController
 		}
 		$commande->setTotalPrice($total); // Mise à jour du total calculé
 		$gestionnaire->flush();
+		$requete->getSession()->remove('panier');
 		$this->addFlash('success', 'Commande enregistrée avec succès.');
 		return $this->redirectToRoute('commande_creer', ['success' => true]);
 	}
@@ -1751,29 +1763,42 @@ class UserType extends AbstractType
 
 {% extends 'base.html.twig' %}
 
-{% block title %}Mes commandes{% endblock %}
+{% block title %}Mes commandes
+{% endblock %}
 
 {% block body %}
-  <h1 class="text-center mb-4">📜 Mes commandes</h1>
+	<h1 class="text-center mb-4">📜 Mes commandes</h1>
 
-  {% if orders is empty %}
-    <p class="alert alert-info">Aucune commande.</p>
-  {% else %}
-    <div class="list-group">
-      {% for order in orders %}
-        <div class="list-group-item">
-          <h5 class="mb-1">Commande n°{{ loop.index }}</h5>
-          <p class="text-muted mb-1">Passée le {{ order.createdAt|date('d/m/Y H:i') }} — Total : {{ order.totalPrice }} €</p>
-          <ul class="mb-2">
-            {% for item in order.articles %}
-              <li>{{ item.plant.name }} × {{ item.quantity }} – {{ item.plant.price }} €</li>
-            {% endfor %}
-          </ul>
-          <p><strong>Statut :</strong> {{ order.status }}</p>
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
+	{% if orders is empty %}
+		<p class="alert alert-info">Aucune commande.</p>
+	{% else %}
+		<div class="list-group">
+			{% for order in orders %}
+				<div class="list-group-item">
+					<h5 class="mb-1">Commande n°{{ loop.index }}</h5>
+					<p class="text-muted mb-1">Passée le
+						{{ order.createdAt|date('d/m/Y H:i') }}
+						— Total :
+						{{ order.totalPrice }}
+						€</p>
+					<ul class="mb-2">
+						{% for item in order.articles %}
+							<li>
+								<a href="{{ path('plants_show', { id: item.plant.id }) }}">{{ item.plant.name }}</a>
+								×
+								{{ item.quantity }}
+								–
+								{{ item.plant.price }}
+								€</li>
+						{% endfor %}
+					</ul>
+					<p>
+						<strong>Statut :</strong>
+						{{ order.status }}</p>
+				</div>
+			{% endfor %}
+		</div>
+	{% endif %}
 {% endblock %}
 
 
@@ -2487,10 +2512,11 @@ document.addEventListener("DOMContentLoaded", () => {
 │   ├── packages/
 │   │   ├── cache.yaml
 │   │   ├── csrf.yaml
+│   │   ├── dev/
+│   │   │   └── monolog.yaml
 │   │   ├── doctrine_migrations.yaml
 │   │   ├── doctrine.yaml
 │   │   ├── framework.yaml
-│   │   ├── monolog.yaml
 │   │   ├── routing.yaml
 │   │   ├── security.yaml
 │   │   ├── twig.yaml
@@ -2531,8 +2557,11 @@ document.addEventListener("DOMContentLoaded", () => {
 │   ├── logs/
 │   │   ├── HEAD
 │   │   └── refs/
-│   │       └── heads/
-│   │           └── master
+│   │       ├── heads/
+│   │       │   └── master
+│   │       └── remotes/
+│   │           └── origin/
+│   │               └── master
 │   ├── objects/
 │   │   ├── 01/
 │   │   │   ├── 4a85e1b0b38760d281a42ba7078576482b34cf
@@ -2550,8 +2579,10 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 3df825df467e94c7cb303658f4dcd2f343a883
 │   │   │   └── f267cb7aa3b2cb612e318a1f5d4b036655a1f1
 │   │   ├── 06/
+│   │   │   ├── cab82de685fef1e475f02132abe7decd0b58b3
 │   │   │   ├── e6535c82887143f06e62dc1c730b64cd0f2e12
-│   │   │   └── f331800b055cbcb2d2993e33f8906e79bc9fc3
+│   │   │   ├── f331800b055cbcb2d2993e33f8906e79bc9fc3
+│   │   │   └── fae0003fa0fb1b657812f31ad1b55540d316bb
 │   │   ├── 07/
 │   │   │   ├── b1737a88f31854c74ae46f41c34c146d3b2ca4
 │   │   │   └── c2d77ae0f51815addb1f2d364ab8a535d1f46d
@@ -2587,6 +2618,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 2eb78090b484991c22c6feb7b786c6a24e6dbb
 │   │   │   └── e659f186000bb6245642095fee37b9d00777cd
 │   │   ├── 14/
+│   │   │   ├── 3bc4eaa2ae859ae54fd9f7d1d88ac4d9de307c
 │   │   │   └── f0c6d42a336d756fb5ebd0ae9c9b889e23ef0d
 │   │   ├── 17/
 │   │   │   └── 912f2c07ec8150293309ecc146c23eb31582eb
@@ -2599,6 +2631,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 1b/
 │   │   │   └── d1fefd9f61dfa9da9f4b7040c71a97ce617a45
 │   │   ├── 1c/
+│   │   │   ├── e46ba87d535d9828f3b087323d76ad0d109283
 │   │   │   └── ec4b8ca5ad487b5e0257ffc912f8128aae1dda
 │   │   ├── 1d/
 │   │   │   └── 5e23bb76b1fa9dc92f047bd4b10a7848c27514
@@ -2610,6 +2643,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── c74c2d98cfea0f91e0e8d3b19592881e1a1632
 │   │   │   └── d26488df4c83c6d2397dca2607711b128686ce
 │   │   ├── 21/
+│   │   │   ├── 1408759243beba3bbd7a373c6693f99825108e
 │   │   │   └── 33610be8a857e33e4aa920880b148026a01085
 │   │   ├── 22/
 │   │   │   └── ba1092f386474e7f7a0044701c867e6809cd92
@@ -2635,6 +2669,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 45b710dfdea4327cc44facb3384345e6f5ed17
 │   │   │   ├── acb3f5109a7fb8c400ac6e4bb12b1eb770850f
 │   │   │   └── ad0103afdfd334e9fd736dae53f88bd60be661
+│   │   ├── 2b/
+│   │   │   └── 952aa6cb26b2d52adb329bfe11e7cfdc291828
 │   │   ├── 2c/
 │   │   │   └── e194ffe7ac74f32329d59f46a5f7b6014fd9c8
 │   │   ├── 2d/
@@ -2643,12 +2679,14 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 21c45aa9354f281734d0d757293cbb0b275730
 │   │   │   └── da3a619c96fa30349fccb688de4086fc39cf1a
 │   │   ├── 30/
+│   │   │   ├── 2f9eb2466637d38f72224f292966cae7800d06
 │   │   │   └── b6db53a1c52d6217edf2ad9e6469aed726474f
 │   │   ├── 31/
 │   │   │   ├── 0ed68e5f65d31f032d1d7340713466db9a6946
 │   │   │   ├── 1950a6b72205a6503b2f0617973850b359862d
 │   │   │   └── ec5da468a00a5dd7fe78e01f2b335d5cf2267b
 │   │   ├── 32/
+│   │   │   ├── 56b94d8d853580e0cc7f409bbc029ae8530f4e
 │   │   │   ├── 9b29d14f9cb3b795a732015a3a5c2ad7d7532a
 │   │   │   ├── b18ba94b83c9ca7f084e72af137f97f7d5c7aa
 │   │   │   └── ef9e130217ffd9724127496875cbc0fb96aa15
@@ -2663,22 +2701,27 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── 996185abc34a33c6badfcd4ebd402756c57933
 │   │   ├── 39/
 │   │   │   ├── 955c56b0c113fd2e3d6db9c63d10a9317cbd14
-│   │   │   └── b65628bbaab258c5559c012ca1cc797aeff7d0
+│   │   │   ├── b65628bbaab258c5559c012ca1cc797aeff7d0
+│   │   │   └── fcc6d23d48b25b69d13cf3d13030ff536b70cb
 │   │   ├── 3a/
 │   │   │   └── 4901eb37bae10b5ca243982ae604ce03d7e77f
 │   │   ├── 3b/
 │   │   │   ├── 992d5ed392d11a6d51a7c92b1dd01b570dc32d
-│   │   │   └── 9eb8e667bfc27f5389a06ba631be41416c65ca
+│   │   │   ├── 9eb8e667bfc27f5389a06ba631be41416c65ca
+│   │   │   └── d68dc97ee2d93e64767a608caac4ef59779742
 │   │   ├── 3c/
 │   │   │   └── e538359351351fa6b50885cdbbee1a23aaa32a
 │   │   ├── 3d/
+│   │   │   ├── 36f7f5211c440fecfe349015b670ab1369b7f7
 │   │   │   └── a75f4442364e14784706a46f911c138a3f20ea
 │   │   ├── 3e/
 │   │   │   └── 1f6038f42636f80c4e1a3c8c96640a21fa39ca
 │   │   ├── 3f/
 │   │   │   ├── 795d921eae0f2961c18624a1ea9bdfeaca11d4
-│   │   │   └── 81e29bb35b7ed9e65bd6f3b7418f8f96ad1cec
+│   │   │   ├── 81e29bb35b7ed9e65bd6f3b7418f8f96ad1cec
+│   │   │   └── 9a603b67e443029a0e904647ce653896b0b6e2
 │   │   ├── 40/
+│   │   │   ├── 98bf9bb8d42205c27d23b92a29d00e30cc919a
 │   │   │   └── d40405e1e9651723b0169bac8f1a36489021ea
 │   │   ├── 41/
 │   │   │   ├── 6b0468faa82384dd7005194f3d51e27d0dea84
@@ -2730,6 +2773,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 58/
 │   │   │   └── b894582abb0989a132c98d563ac3c83b57e737
 │   │   ├── 5a/
+│   │   │   ├── 9d2ac1d629b309f22387e3544f0e90e7d9f299
 │   │   │   ├── c4e5305826ac533ced9d8561e97a87b8aa6a66
 │   │   │   └── eb96491f7a44bb81e5d2e43b9fb1bc01d8fd64
 │   │   ├── 5b/
@@ -2744,20 +2788,25 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 16958594c84a5d8425fcc76e62bb4d1fb663c9
 │   │   │   └── 236aefeb2ecdc785e27ff419b275baaf27f6b1
 │   │   ├── 61/
-│   │   │   └── af2732aed0d33e53acd2caebd80f3ff9b2025c
+│   │   │   ├── af2732aed0d33e53acd2caebd80f3ff9b2025c
+│   │   │   └── e2efb36cdbf8f1c1b885161171432996ea2ed2
 │   │   ├── 62/
 │   │   │   └── d6f0b530e9b2b90bc86a05193cf603b0760869
 │   │   ├── 63/
 │   │   │   ├── 028d770140ecd887ff512f8bb11dc9d0f48d51
-│   │   │   └── 8b96aa994d970173c0b89f5ee011f7e4409639
+│   │   │   ├── 8b96aa994d970173c0b89f5ee011f7e4409639
+│   │   │   └── a948f1de345495498b5cfeb2e3629985ea2b3f
 │   │   ├── 64/
 │   │   │   ├── 30f15e81e214e308e21a8dc3fe3c2464113693
+│   │   │   ├── 6123ba9e3f3887df179b33c96e299d5bf3f382
 │   │   │   ├── a235f5f9a90506ead6bd5d7093500d0c55ab5e
 │   │   │   ├── b6b13d333c7e3a19702b2761c8051b4c699a77
 │   │   │   └── c974bcfc92fd3eceeaf1ceabbb6472220b49b7
 │   │   ├── 65/
 │   │   │   ├── 0a9470e90986d869b3d2b545da8b70721ec14e
 │   │   │   └── 7af7e6da4de3ee7faf059b280f7344359b86a3
+│   │   ├── 66/
+│   │   │   └── 1c09bbc1eff68695fccc12c4ebf239bde96c96
 │   │   ├── 67/
 │   │   │   ├── 5a646c63faedaed5cd66da24210183da65241e
 │   │   │   └── 93d32569c35830c1aee0df6bfce38d73d57281
@@ -2780,6 +2829,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 89ceacf33a3c1bc0d89e9ee301301fecf08c38
 │   │   │   └── ca3227630f38480a0e35d1c734b499a387251d
 │   │   ├── 6d/
+│   │   │   ├── a99246a279a601ec07bba47c0c4a60d205d344
 │   │   │   ├── ea73a93b5be5bcea0eaf16d4cfe1002c65ca6a
 │   │   │   └── feb5fbe3d7248e3e02d7e1946e5c8b135d6bf7
 │   │   ├── 6e/
@@ -2788,6 +2838,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 919663649008c688b3a69ff2aa894a30c6977b
 │   │   │   └── b6d8687955f4342d582a5dc21b297692c6b127
 │   │   ├── 70/
+│   │   │   ├── 7a044002c3d1927a174485fc8ed5dcbd37cc62
 │   │   │   └── f03abd3ac0a55d31a08a7f5ebc91bf274fc633
 │   │   ├── 71/
 │   │   │   ├── 81aad23280458dd1b39f9166ffc0699a010b37
@@ -2816,6 +2867,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 7c/
 │   │   │   └── 03a13bec05a94ab14332b91268387039300ba9
 │   │   ├── 7d/
+│   │   │   ├── 6984ae26c6bef3774bdf201f35073ab3a8860c
 │   │   │   └── 8ce52899dcda03a9c7a4e85973ca78197b3d1c
 │   │   ├── 7e/
 │   │   │   ├── 20aa7570331c9050ae32186c073d58c7f6d1f6
@@ -2829,10 +2881,12 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 81/
 │   │   │   ├── 45bb87641d0fe520ef1e9a0386e93f6bfc8d6b
 │   │   │   ├── 66181c68ab07bfac9aee6e482c7cc24031b8aa
+│   │   │   ├── 8bcc652318af46ff3d3bd422e47c4e97d671f3
 │   │   │   ├── 8bdf420f06fedb6e48f903d3ed071f08e01ce1
 │   │   │   ├── b86359511adabcc4c5fe9272a074910cdf8eb8
 │   │   │   ├── ba7ea90687c62b065ba9e45148efe96a8e11f2
-│   │   │   └── f5ed8244bf29bf8f99830aecdd1df1ca2c2b74
+│   │   │   ├── f5ed8244bf29bf8f99830aecdd1df1ca2c2b74
+│   │   │   └── fc77a095a06f2c749fe619f2bfb0dffb9f4306
 │   │   ├── 82/
 │   │   │   ├── 55b47da5412a3e27720111cce668773d4b76f9
 │   │   │   └── e3a754b6a0fcb238b03c0e47d05219fbf9cf89
@@ -2853,6 +2907,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 0f8650eef60d582c64b3db241703eda77476a4
 │   │   │   └── 5ee0869e3e0b2bb1c44eacf1425ffcbdec29f7
 │   │   ├── 89/
+│   │   │   ├── 4ee5f50d32f80e2c40db6ad1c51aa7947736ba
 │   │   │   └── 60cccb45747b7cbe93dd669a57ed14ca982599
 │   │   ├── 8a/
 │   │   │   └── c1b1e27677dd760ced5d8176dd19faf7d40a40
@@ -2867,10 +2922,13 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── c0326c1c2b9b359a6480320e57facf6182cf36
 │   │   │   └── f3f6b2cb94c978e7039e4aa009eb064d0376a4
 │   │   ├── 8d/
-│   │   │   └── b05ac754b64763c6be08183c4b7e890fc3d7c6
+│   │   │   ├── b05ac754b64763c6be08183c4b7e890fc3d7c6
+│   │   │   └── e92aad6bdafcac3aade615171fdf331bc2d3a5
 │   │   ├── 8e/
 │   │   │   └── efd71f41972c106a66c4eaad9b66295d13ef78
 │   │   ├── 91/
+│   │   │   ├── 069dff2d127bba5d1baa8d5db600c69f8c3c66
+│   │   │   ├── 141b0639148f8ad934cc2871d08923df4ff75b
 │   │   │   ├── 70a4105a0c6f0dd9d8f585d35360848073dbaa
 │   │   │   ├── 75c72d2b58eb85ef5399f66a22eeb629cb40f3
 │   │   │   └── 91abbfb1b35a1c9ccdef722e2edf853e960963
@@ -2904,11 +2962,13 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 3918fc99eaa34441409864972af2b4fdab39fb
 │   │   │   └── 8c5fd15ca782a0ac49208c725f75ca010fb351
 │   │   ├── 9e/
+│   │   │   ├── 74954d8f376fb713c2ed634c7982141224407e
 │   │   │   ├── 8cd00d6a34b1fdf4ce022bcfa061cd0576a41c
 │   │   │   └── 994fe02ceb7264d5f72385dfde0c499f70817b
 │   │   ├── 9f/
 │   │   │   └── 908279afabd8b2494e8864ba9122b77b5bbbca
 │   │   ├── a0/
+│   │   │   ├── 059af72728ff23577ee036c0770c073c595c33
 │   │   │   └── 2a7ac0006d5877ac940b10d5c5248554df7d71
 │   │   ├── a2/
 │   │   │   ├── 0c05ed6d79e0c623691707c566fdddb247f8bd
@@ -2986,7 +3046,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── bc/
 │   │   │   ├── 51570cf8c51c18630c915de62c64936d1e1a46
 │   │   │   ├── 54e41b4ccd2aa77fec03b96378e8d1d939269f
-│   │   │   └── 5bcfcfdcda26c45ca11ba675f854276d19548c
+│   │   │   ├── 5bcfcfdcda26c45ca11ba675f854276d19548c
+│   │   │   └── 693bf44bc683d52d60919612b6175f0ec49727
 │   │   ├── bd/
 │   │   │   └── 576a22ab9f596c6137b5fc92e61786e4bfe548
 │   │   ├── be/
@@ -3008,6 +3069,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── c5/
 │   │   │   ├── 0f1acc8a73d98959cad55182259bfa919e06cb
 │   │   │   ├── 2fee4c07097591ae4cd68bda61d5f066f4c2f2
+│   │   │   ├── 496325097747860e075748a387e51010f0926f
 │   │   │   └── 612b0ad1957ade3aeb03176f49da20cda51469
 │   │   ├── c7/
 │   │   │   └── 7d36281e10b2af45acba498d96bae652707cc0
@@ -3022,7 +3084,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 114d5db2f408cca98550260c9c33d237d90706
 │   │   │   ├── 55879a922951408b4787c57764d8c2b9931785
 │   │   │   ├── 8b658b0e233d374942a43796124c5dbbdeb305
-│   │   │   └── 8ce421f436a5337dee32d42b92118ec5fa13fd
+│   │   │   ├── 8ce421f436a5337dee32d42b92118ec5fa13fd
+│   │   │   └── fb63afc6ca0103bc3caccd666646a0fec915c0
 │   │   ├── cd/
 │   │   │   ├── 115af038e532766c586cef25497aba3464b6af
 │   │   │   └── 4c7609a18a3c12cc8031383e2d0da669e3cb44
@@ -3040,6 +3103,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── dc1c041eb4a1a0c5cb5955fc20266923e69ece
 │   │   ├── d2/
 │   │   │   └── 52fe3285a4d2478a753f8c9beeb62221305f39
+│   │   ├── d3/
+│   │   │   └── 0c240bfe350c21d7ae17e3e2a2ba54232f8ae5
 │   │   ├── d4/
 │   │   │   └── 2c52d6d2573bc94f3423d8f6d63a8eac3b61d8
 │   │   ├── d5/
@@ -3089,13 +3154,15 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── 13d2a8358189e71c79a8630b430556f694973c
 │   │   ├── ed/
 │   │   │   ├── 2fe51e29ee4768228d56ce2cbc9c466a7c7909
-│   │   │   └── 35f3f3a06e2da27d36049ab581888c50afb7b2
+│   │   │   ├── 35f3f3a06e2da27d36049ab581888c50afb7b2
+│   │   │   └── 6c28624c4bbc8667453b1b9b09ec893b95b9b8
 │   │   ├── ef/
 │   │   │   └── 4fda616cd4b19c642096fcbad18ed40ac4bfd5
 │   │   ├── f0/
 │   │   │   ├── 337a699d16460f8c5fbf48925d61aa13261f4c
 │   │   │   └── 7048de8b960e6d463a3be80cca6e40d19b47db
 │   │   ├── f1/
+│   │   │   ├── 0f6fe41c67f9235734c68843ac59c623fc4d90
 │   │   │   ├── 7ca5831f247f1bc2ffda73a6772aa78b0b9000
 │   │   │   ├── ea71afbb0865df525f882641561f447fc79e2d
 │   │   │   └── ec7e9752d5d5c00f09f220d756c9c7847b6697
@@ -3122,10 +3189,12 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── fa/
 │   │   │   ├── 7595bcd614d32ad3e8c4a367afff48ca11e343
 │   │   │   ├── 892ed21a09e47cd836261864e112fb2f1e4459
+│   │   │   ├── 92c7138fdb5aadee16e90196edf6b63c268374
 │   │   │   └── b5ada70f2dccc1e72c84d17db473e470324433
 │   │   ├── fb/
 │   │   │   └── de66a1a6cef81f8daa4cee769296a8b6dd3459
 │   │   ├── fd/
+│   │   │   ├── d1b4ec7fb4e9ab2687139bf2338a98d581b2af
 │   │   │   └── e145056a3be33f3a67aaf0ab93f5a86c7fc7e2
 │   │   ├── fe/
 │   │   │   └── f7e7b8e4e446a146ddd134bd4bcd6a08641040
@@ -3134,6 +3203,9 @@ document.addEventListener("DOMContentLoaded", () => {
 │   └── refs/
 │       ├── heads/
 │       │   └── master
+│       ├── remotes/
+│       │   └── origin/
+│       │       └── master
 │       └── tags/
 ├── .gitignore
 ├── Makefile
@@ -3141,7 +3213,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   ├── .gitignore
 │   ├── Version20250512104230.php
 │   ├── Version20250512104438.php
-│   └── Version20250512105354.php
+│   ├── Version20250512105354.php
+│   └── Version20250518153935.php
 ├── projet.txt
 ├── public/
 │   ├── css/
@@ -3218,4 +3291,4 @@ document.addEventListener("DOMContentLoaded", () => {
 │       └── show.html.twig
 └── users.txt
 
-246 directories, 496 files
+254 directories, 536 files
