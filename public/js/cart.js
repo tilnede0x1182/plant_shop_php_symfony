@@ -343,4 +343,9 @@ document.addEventListener("DOMContentLoaded", () => {
 	window.Cart = new Cart();
 	window.Cart.updateNavbarCount();
 	window.Cart.render();
+
+  // Vide le panier si succès détecté via flash
+	if (document.querySelector('.alert-success')) {
+		window.Cart.clear();
+	}
 });
