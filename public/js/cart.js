@@ -43,6 +43,16 @@ class Cart {
 	}
 
 	/**
+	 * Enregistre l'état du panier et met à jour l'affichage du compteur dans la navbar.
+	 *
+	 * @param {Object} cart - Objet représentant le contenu actuel du panier.
+	 */
+  #commitCart(cart) {
+		this.save(cart);
+		this.updateNavbarCount();
+	}
+
+	/**
 	 * Ajoute un produit au panier.
 	 *
 	 * @param {number} id Identifiant unique du produit.
@@ -55,14 +65,22 @@ class Cart {
 	 */
 	add(id, name, price, stock) {
 		const cart = this.get();
-		if (cart[id]) {
-			cart[id].quantity += 1;
-		} else {
-			cart[id] = { id, name, price, quantity: 1, stock };
+		if (!cart[id]) {
+			cart[id] = { id, name, price, quantity: 0, stock };
 		}
-		this.save(cart);
-		this.updateNavbarCount();
+
+		if (cart[id].quantity > stock) {
+			showStockAlert(name, stock);
+			setTimeout(() => {
+				cart[id].quantity = stock;
+				this.#commitCart(cart);
+			}, 300);
+		} else {
+			cart[id].quantity += 1;
+			this.#commitCart(cart);
+		}
 	}
+
 
 	/**
 	 * Met à jour la quantité d'un produit dans le panier.
@@ -344,9 +362,37 @@ document.addEventListener("DOMContentLoaded", () => {
 	window.Cart.updateNavbarCount();
 	window.Cart.render();
 
-  // Vide le panier si succès détecté via flash
-	if (document.querySelector('.alert-success')) {
+	// Vide le panier si succès détecté via flash
+	if (document.querySelector(".alert-success")) {
 		window.Cart.clear();
-    window.Cart.updateNavbarCount();
+		window.Cart.updateNavbarCount();
 	}
 });
+
+function showStockAlert(plantName, stock) {
+	const alert = document.createElement("div");
+	alert.className =
+		"alert alert-warning fade position-absolute top-0 start-50 translate-middle-x mt-3 shadow";
+	alert.role = "alert";
+	alert.style.zIndex = "1055";
+	alert.style.maxWidth = "600px";
+	alert.style.pointerEvents = "none";
+	const message = document.createTextNode(
+		"Stock insuffisant pour pour cette plante ("
+	);
+	const strong = document.createElement("strong");
+	strong.textContent = plantName;
+	const message2 = document.createTextNode(
+		`), actuellement, il en reste ${stock}.`
+	);
+	alert.appendChild(message);
+	alert.appendChild(strong);
+	alert.appendChild(message2);
+	document.body.appendChild(alert);
+	setTimeout(() => alert.classList.add("show"), 10);
+	setTimeout(() => {
+		alert.classList.remove("show");
+		alert.classList.add("fade");
+		setTimeout(() => alert.remove(), 300);
+	}, 3000);
+}

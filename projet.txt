@@ -2191,14 +2191,21 @@ class Cart {
 	 * cart.add(1, "Plante Verte", 12.99, 10);
 	 */
 	add(id, name, price, stock) {
-		const cart = this.get();
-		if (cart[id]) {
-			cart[id].quantity += 1;
-		} else {
-			cart[id] = { id, name, price, quantity: 1, stock };
+		if (!cart[id]) {
+			cart[id] = { id, name, price, quantity: 0, stock };
 		}
+
+		if (cart[id].quantity + 1 > stock) {
+			if (!window.appUser?.admin) {
+				showStockAlert("Stock insuffisant pour cette plante.");
+			}
+			return;
+		}
+
+		cart[id].quantity += 1;
 		this.save(cart);
-		this.updateNavbarCount();
+
+		setTimeout(() => this.updateNavbarCount(), 300);
 	}
 
 	/**
@@ -2481,12 +2488,23 @@ document.addEventListener("DOMContentLoaded", () => {
 	window.Cart.updateNavbarCount();
 	window.Cart.render();
 
-  // Vide le panier si succès détecté via flash
-	if (document.querySelector('.alert-success')) {
+	// Vide le panier si succès détecté via flash
+	if (document.querySelector(".alert-success")) {
 		window.Cart.clear();
-    window.Cart.updateNavbarCount();
+		window.Cart.updateNavbarCount();
 	}
 });
+
+function showStockAlert(message) {
+    const alert = document.createElement("div");
+    alert.className = "alert alert-warning alert-dismissible fade show";
+    alert.role = "alert";
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.querySelector("main")?.prepend(alert);
+}
 
 
 # public/css/custom.css
@@ -2568,6 +2586,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │           └── origin/
 │   │               └── master
 │   ├── objects/
+│   │   ├── 00/
+│   │   │   └── a55748ed41cf44c8b975dc7ec39d66719b356d
 │   │   ├── 01/
 │   │   │   ├── 4a85e1b0b38760d281a42ba7078576482b34cf
 │   │   │   ├── 550e5a1db348525c652f820848174ac859a8c7
@@ -2745,7 +2765,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 42/
 │   │   │   └── 641058a7d205ebd1556e0f937ac97323a3c6bb
 │   │   ├── 43/
-│   │   │   └── 892bba7fab8ceb23025dc201d1a8cbb9e026f6
+│   │   │   ├── 892bba7fab8ceb23025dc201d1a8cbb9e026f6
+│   │   │   └── b1213fede170a34acae4cf612b4a0e5f734bfe
 │   │   ├── 44/
 │   │   │   └── 277629cd6b0bbb5192b68db86f0036a8fda5e2
 │   │   ├── 46/
@@ -2753,6 +2774,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 47/
 │   │   │   └── e6c1d083deedf8e44c68736536b9f2cf0b3b75
 │   │   ├── 48/
+│   │   │   ├── d5a58537aef9b74ded8c03b0514911df6840e6
 │   │   │   └── f2ca42b44fa6338b95f9c78b816a23b160021f
 │   │   ├── 49/
 │   │   │   └── 6f5e6e9afef860be3d3aaead4d9a8e2c627409
@@ -2798,6 +2820,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── c4e5305826ac533ced9d8561e97a87b8aa6a66
 │   │   │   └── eb96491f7a44bb81e5d2e43b9fb1bc01d8fd64
 │   │   ├── 5b/
+│   │   │   ├── 0414ba4620669e59668b0a18bdae0d1d260cba
 │   │   │   ├── c38c185e130ca20faf1946627e408b92a9f7ff
 │   │   │   ├── dcaed61f41abb1e2a70d57a55eeb7c6f1c2eda
 │   │   │   └── f85ee24ec8a16d402406e9a1b92a8e34bda70e
@@ -2892,6 +2915,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 6223db60692078449dfe6ff1cf385d00a39766
 │   │   │   └── e28e436af94aa03e00b904890e39cb15160ee4
 │   │   ├── 7b/
+│   │   │   ├── 7459901c6c329f2282f698b921cdbe527ac967
 │   │   │   └── f3cedc766cfb5f6cdefc48e57d3240c9a6592e
 │   │   ├── 7c/
 │   │   │   └── 03a13bec05a94ab14332b91268387039300ba9
@@ -2935,6 +2959,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── 7eb25d15da47921c07414c3b5d3a333cf889ff
 │   │   ├── 88/
 │   │   │   ├── 0f8650eef60d582c64b3db241703eda77476a4
+│   │   │   ├── 58327c2f35902d4f5e7195346bd21581410359
 │   │   │   └── 5ee0869e3e0b2bb1c44eacf1425ffcbdec29f7
 │   │   ├── 89/
 │   │   │   ├── 4ee5f50d32f80e2c40db6ad1c51aa7947736ba
@@ -2984,7 +3009,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── c425c7108dc4ff3793cb8c5e24eda290b4ae61
 │   │   │   └── f32c9af11dbd7811bd035c0bf451ceebd546ed
 │   │   ├── 98/
-│   │   │   └── 2f46cb5e99a0420af627c128c446edb3500a8a
+│   │   │   ├── 2f46cb5e99a0420af627c128c446edb3500a8a
+│   │   │   └── 75aaea9e489d3d3a71470d80e46c06d7113d2d
 │   │   ├── 99/
 │   │   │   ├── 5151b50e92d887c6d14507f5063aa505becd9d
 │   │   │   ├── 82c218d6969c72d4c91e3834e3f535e2dfe68b
@@ -3068,6 +3094,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 26900bde0e0ce1e476235ca845695730fe7968
 │   │   │   └── d786ce173c08f31881c42a280fdee0dac1e3f6
 │   │   ├── b7/
+│   │   │   ├── 35a0d1c1452b5583199ed7ee4b5a5e07fe980c
 │   │   │   └── 59e370c3d4633a93011e90597ef6a3ffdadc32
 │   │   ├── b8/
 │   │   │   ├── 6b977d6be01c5bfc7137c6a64b165ec436c9e6
@@ -3108,9 +3135,12 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── 81d2ccdf1d0303ac9efaab6d90a58838c25e56
 │   │   ├── c3/
 │   │   │   └── 066f5f2e35811065d2bdeb0a02871503ac2993
+│   │   ├── c4/
+│   │   │   └── b98c58a73d67ff0308ba4e875516ffe1e65912
 │   │   ├── c5/
 │   │   │   ├── 0f1acc8a73d98959cad55182259bfa919e06cb
 │   │   │   ├── 2fee4c07097591ae4cd68bda61d5f066f4c2f2
+│   │   │   ├── 3f804877ed2c77d59cd4c7cf33190c4ed96247
 │   │   │   ├── 496325097747860e075748a387e51010f0926f
 │   │   │   └── 612b0ad1957ade3aeb03176f49da20cda51469
 │   │   ├── c7/
@@ -3146,7 +3176,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 7d9c175a62bc77b92c41c3e4bd250dcd493742
 │   │   │   └── dc1c041eb4a1a0c5cb5955fc20266923e69ece
 │   │   ├── d2/
-│   │   │   └── 52fe3285a4d2478a753f8c9beeb62221305f39
+│   │   │   ├── 52fe3285a4d2478a753f8c9beeb62221305f39
+│   │   │   └── 6aeb77d162decba661e6d10cc88c416a59e9b5
 │   │   ├── d3/
 │   │   │   └── 0c240bfe350c21d7ae17e3e2a2ba54232f8ae5
 │   │   ├── d4/
@@ -3190,6 +3221,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── e6/
 │   │   │   └── 9de29bb2d1d6434b8b29ae775ad8c2e48c5391
 │   │   ├── e7/
+│   │   │   ├── 02e071ad7757373d4c9ad4b2be499b1b7f18a7
 │   │   │   └── 68ea90521839e354685eec742befafe49572b4
 │   │   ├── e8/
 │   │   │   └── a43562467d94b80781759fc8d301af68facd75
@@ -3237,6 +3269,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 4bbd09239237bce6ba8cff480ccdc69970f344
 │   │   │   └── 9e08d07b65bbab1c93d39650e7dc3505595b8f
 │   │   ├── f8/
+│   │   │   ├── 532f633dd555a62cd9be23c20f896811ef98e7
 │   │   │   ├── 53be15cf348ec1b6caaff738de0153eb9eeef0
 │   │   │   └── 93708232badcf87397256e38b4f5500dd81e80
 │   │   ├── fa/
@@ -3348,4 +3381,4 @@ document.addEventListener("DOMContentLoaded", () => {
 │       └── show.html.twig
 └── users.txt
 
-265 directories, 577 files
+267 directories, 590 files

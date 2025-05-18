@@ -21,5 +21,10 @@
 		<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 		<script src="/js/cart.js" defer></script>
 		{% block javascripts %}{% endblock %}
+		<script>
+			window.appUser = {
+				admin: {{ app.user and app.user.admin ? 'true' : 'false' }}
+			};
+		</script>
 	</body>
 </html>
