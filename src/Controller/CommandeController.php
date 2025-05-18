@@ -75,6 +75,6 @@ class CommandeController extends AbstractController
 		$gestionnaire->flush();
 		$requete->getSession()->remove('panier');
 		$this->addFlash('success', 'Commande enregistrée avec succès.');
-		return $this->redirectToRoute('commandes_index', ['success' => true]);
+		return $this->redirectToRoute('commandes_index');
 	}
 }

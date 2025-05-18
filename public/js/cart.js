@@ -347,5 +347,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // Vide le panier si succès détecté via flash
 	if (document.querySelector('.alert-success')) {
 		window.Cart.clear();
+    window.Cart.updateNavbarCount();
 	}
 });
