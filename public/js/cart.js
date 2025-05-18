@@ -47,7 +47,7 @@ class Cart {
 	 *
 	 * @param {Object} cart - Objet représentant le contenu actuel du panier.
 	 */
-  #commitCart(cart) {
+	#commitCart(cart) {
 		this.save(cart);
 		this.updateNavbarCount();
 	}
