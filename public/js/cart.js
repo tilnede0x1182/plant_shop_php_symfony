@@ -69,7 +69,7 @@ class Cart {
 			cart[id] = { id, name, price, quantity: 0, stock };
 		}
 
-		if (cart[id].quantity > stock) {
+		if (cart[id].quantity >= stock) {
 			showStockAlert(name, stock);
 			setTimeout(() => {
 				cart[id].quantity = stock;
