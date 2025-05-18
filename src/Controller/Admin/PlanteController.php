@@ -30,9 +30,9 @@ class PlanteController extends AbstractController
 		if ($form->isSubmitted() && $form->isValid()) {
 			$em->persist($plante);
 			$em->flush();
+			$this->addFlash('success', 'Plante ajoutée avec succès.');
 			return $this->redirectToRoute('admin_plantes_index');
 		}
-
 		return $this->render('admin/plante/new.html.twig', ['form' => $form->createView()]);
 	}
 
@@ -44,9 +44,9 @@ class PlanteController extends AbstractController
 
 		if ($form->isSubmitted() && $form->isValid()) {
 			$em->flush();
+			$this->addFlash('success', 'Plante modifiée avec succès.');
 			return $this->redirectToRoute('admin_plantes_index');
 		}
-
 		return $this->render('admin/plante/edit.html.twig', ['form' => $form->createView(), 'plant' => $plant]);
 	}
 
@@ -57,6 +57,7 @@ class PlanteController extends AbstractController
 			$em->remove($plant);
 			$em->flush();
 		}
+		$this->addFlash('success', 'Plante supprimée.');
 		return $this->redirectToRoute('admin_plantes_index');
 	}
 }

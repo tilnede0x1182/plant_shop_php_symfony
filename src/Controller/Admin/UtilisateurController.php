@@ -35,6 +35,7 @@ class UtilisateurController extends AbstractController
 			}
 			$em->persist($user);
 			$em->flush();
+			$this->addFlash('success', 'Utilisateur créé avec succès.');
 			return $this->redirectToRoute('admin_utilisateurs_index');
 		}
 
@@ -60,6 +61,7 @@ class UtilisateurController extends AbstractController
 
 		if ($form->isSubmitted() && $form->isValid()) {
 			$em->flush();
+			$this->addFlash('success', 'Utilisateur modifié avec succès.');
 			return $this->redirectToRoute('admin_utilisateurs_index');
 		}
 
@@ -76,6 +78,7 @@ class UtilisateurController extends AbstractController
 			$em->remove($user);
 			$em->flush();
 		}
+		$this->addFlash('success', 'Utilisateur supprimé.');
 		return $this->redirectToRoute('admin_utilisateurs_index');
 	}
 }

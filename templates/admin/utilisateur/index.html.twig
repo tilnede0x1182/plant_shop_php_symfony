@@ -18,7 +18,11 @@
 		<tbody>
 			{% for user in users %}
 				<tr>
-					<td>{{ user.name }}</td>
+					<td>
+						<a href="{{ path('admin_users_show', { id: user.id }) }}" class="text-decoration-none text-dark">
+							{{ user.name }}
+						</a>
+					</td>
 					<td>{{ user.email }}</td>
 					<td>
 						{% if user.admin %}

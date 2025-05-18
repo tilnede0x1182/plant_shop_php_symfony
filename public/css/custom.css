@@ -3,10 +3,10 @@
 }
 
 .nav-bar-buttons-color {
-  color: #ff8981;
+  color: #ffbbb6;
   transition: color ease;
 }
 
 .nav-bar-buttons-color:hover {
-  color: #5b1313;
+  color: #5c1616;
 }

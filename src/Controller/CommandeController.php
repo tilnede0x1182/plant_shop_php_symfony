@@ -2,12 +2,13 @@
 
 namespace App\Controller;
 
-use App\Entity\Commande;
-use App\Entity\CommandeItem;
-use App\Entity\Plante;
-use App\Repository\PlanteRepository;
+use App\Entity\Order;
+use App\Entity\OrderItem;
+use Psr\Log\LoggerInterface;
+use App\Repository\PlantRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -18,6 +19,7 @@ class CommandeController extends AbstractController
 	#[Route('/commandes', name: 'commandes_index')]
 	public function index(): Response
 	{
+		/** @var \App\Entity\User $utilisateur */
 		$utilisateur = $this->getUser();
 		$commandes = $utilisateur->getCommandes();
 
@@ -25,38 +27,48 @@ class CommandeController extends AbstractController
 	}
 
 	#[Route('/commandes/nouvelle', name: 'commande_creer')]
+	#[IsGranted('IS_AUTHENTICATED_FULLY')]
 	public function create(): Response
 	{
 		return $this->render('commande/new.html.twig');
 	}
 
 	#[Route('/commandes', name: 'commande_enregistrer', methods: ['POST'])]
-	public function store(Request $requete, EntityManagerInterface $gestionnaire, PlanteRepository $repo): Response
+	public function store(Request $requete, EntityManagerInterface $gestionnaire, PlantRepository $repo, LoggerInterface $logger): Response
 	{
+		$logger->info('CommandeController::store appelé', [
+			'request_items' => $requete->get('items')
+		]);
 		$donnees = json_decode($requete->get('items'), true);
+		$logger->info('Items reçus : ' . print_r($donnees, true));
 		$total = 0;
 
-		$commande = new Commande();
+		$commande = new Order();
 		$commande->setUtilisateur($this->getUser());
-		$commande->setStatut('confirmed');
+		$commande->setStatus('confirmed');
+		$commande->setTotalPrice(0); // Initialisation
 
+		$gestionnaire->persist($commande); // Persist AVANT la création des items
+
+		if (empty($donnees)) {
+			return new Response('Aucun item reçu ou JSON malformé : ' . $requete->get('items'), 400);
+		}
 		foreach ($donnees as $ligne) {
 			$plante = $repo->find($ligne['plant_id']);
 			if ($plante->getStock() < $ligne['quantity']) {
 				return $this->redirectToRoute('commande_creer', [], Response::HTTP_SEE_OTHER);
 			}
 			$plante->setStock($plante->getStock() - $ligne['quantity']);
-			$item = new CommandeItem();
-			$item->setPlante($plante);
-			$item->setQuantite($ligne['quantity']);
+			$item = new OrderItem();
+			$item->setPlant($plante);
+			$item->setQuantity($ligne['quantity']);
 			$item->setCommande($commande);
-			$total += $plante->getPrix() * $ligne['quantity'];
+			$total += $plante->getPrice() * $ligne['quantity'];
 			$gestionnaire->persist($item);
 		}
-		$commande->setTotal($total);
-		$gestionnaire->persist($commande);
+		$commande->setTotalPrice($total); // Mise à jour du total calculé
 		$gestionnaire->flush();
-
+		$this->addFlash('success', 'Commande enregistrée avec succès.');
 		return $this->redirectToRoute('commande_creer', ['success' => true]);
 	}
 }

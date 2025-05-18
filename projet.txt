@@ -62,6 +62,17 @@ when@test:
         strict_variables: true
 
 
+# config/packages/monolog.yaml
+
+monolog:
+    handlers:
+        doctrine:
+            type: stream
+            path: '%kernel.logs_dir%/doctrine.log'
+            level: debug
+            channels: [doctrine]
+
+
 # config/packages/routing.yaml
 
 framework:
@@ -168,7 +179,7 @@ doctrine:
 
         profiling_collect_backtrace: '%kernel.debug%'
         use_savepoints: true
-        # logging: true
+        logging: true
 
     orm:
         auto_generate_proxy_classes: true
@@ -600,7 +611,7 @@ class OrderItem
 
 	#[ORM\ManyToOne(inversedBy: 'articles')]
 	#[ORM\JoinColumn(nullable: false)]
-	private ?Plant $plante = null;
+	private ?Plant $plant = null;
 
 	#[ORM\Column(type: 'integer')]
 	private int $quantity;
@@ -621,15 +632,15 @@ class OrderItem
 		return $this;
 	}
 
-	public function getPlante(): ?Plant
+	public function getPlant(): ?Plant
 	{
-		return $this->plante;
+			return $this->plant;
 	}
 
-	public function setPlante(?Plant $plant): self
+	public function setPlant(?Plant $plant): static
 	{
-		$this->plante = $plant;
-		return $this;
+			$this->plant = $plant;
+			return $this;
 	}
 
 	public function getQuantity(): int
@@ -850,9 +861,9 @@ class PlanteController extends AbstractController
 		if ($form->isSubmitted() && $form->isValid()) {
 			$em->persist($plante);
 			$em->flush();
+			$this->addFlash('success', 'Plante ajoutée avec succès.');
 			return $this->redirectToRoute('admin_plantes_index');
 		}
-
 		return $this->render('admin/plante/new.html.twig', ['form' => $form->createView()]);
 	}
 
@@ -864,9 +875,9 @@ class PlanteController extends AbstractController
 
 		if ($form->isSubmitted() && $form->isValid()) {
 			$em->flush();
+			$this->addFlash('success', 'Plante modifiée avec succès.');
 			return $this->redirectToRoute('admin_plantes_index');
 		}
-
 		return $this->render('admin/plante/edit.html.twig', ['form' => $form->createView(), 'plant' => $plant]);
 	}
 
@@ -877,6 +888,7 @@ class PlanteController extends AbstractController
 			$em->remove($plant);
 			$em->flush();
 		}
+		$this->addFlash('success', 'Plante supprimée.');
 		return $this->redirectToRoute('admin_plantes_index');
 	}
 }
@@ -921,6 +933,7 @@ class UtilisateurController extends AbstractController
 			}
 			$em->persist($user);
 			$em->flush();
+			$this->addFlash('success', 'Utilisateur créé avec succès.');
 			return $this->redirectToRoute('admin_utilisateurs_index');
 		}
 
@@ -946,6 +959,7 @@ class UtilisateurController extends AbstractController
 
 		if ($form->isSubmitted() && $form->isValid()) {
 			$em->flush();
+			$this->addFlash('success', 'Utilisateur modifié avec succès.');
 			return $this->redirectToRoute('admin_utilisateurs_index');
 		}
 
@@ -962,6 +976,7 @@ class UtilisateurController extends AbstractController
 			$em->remove($user);
 			$em->flush();
 		}
+		$this->addFlash('success', 'Utilisateur supprimé.');
 		return $this->redirectToRoute('admin_utilisateurs_index');
 	}
 }
@@ -1079,12 +1094,14 @@ class UtilisateurController extends AbstractController
 
 namespace App\Controller;
 
-use App\Entity\Commande;
-use App\Entity\CommandeItem;
+use App\Entity\Order;
+use App\Entity\OrderItem;
 use App\Entity\Plante;
+use Psr\Log\LoggerInterface;
 use App\Repository\PlanteRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -1102,38 +1119,48 @@ class CommandeController extends AbstractController
 	}
 
 	#[Route('/commandes/nouvelle', name: 'commande_creer')]
+	#[IsGranted('IS_AUTHENTICATED_FULLY')]
 	public function create(): Response
 	{
 		return $this->render('commande/new.html.twig');
 	}
 
 	#[Route('/commandes', name: 'commande_enregistrer', methods: ['POST'])]
-	public function store(Request $requete, EntityManagerInterface $gestionnaire, PlanteRepository $repo): Response
+	public function store(Request $requete, EntityManagerInterface $gestionnaire, PlanteRepository $repo, LoggerInterface $logger): Response
 	{
+		$logger->info('CommandeController::store appelé', [
+			'request_items' => $requete->get('items')
+		]);
 		$donnees = json_decode($requete->get('items'), true);
+		$this->get('logger')->info('Items reçus : ' . print_r($donnees, true));
 		$total = 0;
 
-		$commande = new Commande();
+		$commande = new Order();
 		$commande->setUtilisateur($this->getUser());
-		$commande->setStatut('confirmed');
+		$commande->setStatus('confirmed');
+		$commande->setTotalPrice(0); // Initialisation
 
+		$gestionnaire->persist($commande); // Persist AVANT la création des items
+
+		if (empty($donnees)) {
+			return new Response('Aucun item reçu ou JSON malformé : ' . $requete->get('items'), 400);
+		}
 		foreach ($donnees as $ligne) {
 			$plante = $repo->find($ligne['plant_id']);
 			if ($plante->getStock() < $ligne['quantity']) {
 				return $this->redirectToRoute('commande_creer', [], Response::HTTP_SEE_OTHER);
 			}
 			$plante->setStock($plante->getStock() - $ligne['quantity']);
-			$item = new CommandeItem();
-			$item->setPlante($plante);
-			$item->setQuantite($ligne['quantity']);
+			$item = new OrderItem();
+			$item->setPlant($plante);
+			$item->setQuantity($ligne['quantity']);
 			$item->setCommande($commande);
-			$total += $plante->getPrix() * $ligne['quantity'];
+			$total += $plante->getPrice() * $ligne['quantity'];
 			$gestionnaire->persist($item);
 		}
-		$commande->setTotal($total);
-		$gestionnaire->persist($commande);
+		$commande->setTotalPrice($total); // Mise à jour du total calculé
 		$gestionnaire->flush();
-
+		$this->addFlash('success', 'Commande enregistrée avec succès.');
 		return $this->redirectToRoute('commande_creer', ['success' => true]);
 	}
 }
@@ -1427,7 +1454,11 @@ class UserType extends AbstractType
 		<tbody>
 			{% for user in users %}
 				<tr>
-					<td>{{ user.name }}</td>
+					<td>
+						<a href="{{ path('admin_users_show', { id: user.id }) }}" class="text-decoration-none text-dark">
+							{{ user.name }}
+						</a>
+					</td>
 					<td>{{ user.email }}</td>
 					<td>
 						{% if user.admin %}
@@ -1496,38 +1527,44 @@ class UserType extends AbstractType
 
 {% extends 'base.html.twig' %}
 
-{% block title %}Admin - Plantes{% endblock %}
+{% block title %}Admin - Plantes
+{% endblock %}
 
 {% block body %}
-  <h1 class="mb-4">Gestion des plantes</h1>
-  <a class="btn btn-danger rounded-3 mb-3" href="{{ path('admin_plante_new') }}">Nouvelle plante</a>
+	<h1 class="mb-4">Gestion des plantes</h1>
+	<a class="btn btn-danger rounded-3 mb-3" href="{{ path('admin_plante_new') }}">Nouvelle plante</a>
 
-  <table class="table table-hover table-bordered rounded-3 overflow-hidden">
-    <thead class="table-danger">
-      <tr>
-        <th>Nom</th>
-        <th>Prix</th>
-        <th>Stock</th>
-        <th class="text-center">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-    {% for plant in plantes %}
-      <tr>
-        <td>{{ plant.name }}</td>
-        <td>{{ plant.price }} €</td>
-        <td>{{ plant.stock }}</td>
-        <td class="text-center">
-          <a class="btn btn-sm btn-outline-dark rounded-3" href="{{ path('admin_plante_edit', {id: plant.id}) }}">✏</a>
-          <form method="post" action="{{ path('admin_plante_delete', {id: plant.id}) }}" class="d-inline" onsubmit="return confirm('Supprimer ?')">
-            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ plant.id) }}">
-            <button class="btn btn-sm btn-danger rounded-3">🗑</button>
-          </form>
-        </td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
+	<table class="table table-hover table-bordered rounded-3 overflow-hidden">
+		<thead class="table-danger">
+			<tr>
+				<th>Nom</th>
+				<th>Prix</th>
+				<th>Stock</th>
+				<th class="text-center">Actions</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for plant in plantes %}
+				<tr>
+					<td>
+						<a href="{{ path('plante_afficher', { id: plant.id }) }}" class="text-decoration-none text-dark">
+							{{ plant.name }}
+						</a>
+					</td>
+					<td>{{ plant.price }}
+						€</td>
+					<td>{{ plant.stock }}</td>
+					<td class="text-center">
+						<a class="btn btn-sm btn-outline-dark rounded-3" href="{{ path('admin_plante_edit', {id: plant.id}) }}">✏</a>
+						<form method="post" action="{{ path('admin_plante_delete', {id: plant.id}) }}" class="d-inline" onsubmit="return confirm('Supprimer ?')">
+							<input type="hidden" name="_token" value="{{ csrf_token('delete' ~ plant.id) }}">
+							<button class="btn btn-sm btn-danger rounded-3">🗑</button>
+						</form>
+					</td>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
 {% endblock %}
 
 
@@ -1688,6 +1725,7 @@ class UserType extends AbstractType
 		<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 		<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 		<script src="/js/cart.js" defer></script>
+		{% block javascripts %}{% endblock %}
 	</body>
 </html>
 
@@ -1727,7 +1765,7 @@ class UserType extends AbstractType
           <h5 class="mb-1">Commande n°{{ loop.index }}</h5>
           <p class="text-muted mb-1">Passée le {{ order.createdAt|date('d/m/Y H:i') }} — Total : {{ order.totalPrice }} €</p>
           <ul class="mb-2">
-            {% for item in order.items %}
+            {% for item in order.articles %}
               <li>{{ item.plant.name }} × {{ item.quantity }} – {{ item.plant.price }} €</li>
             {% endfor %}
           </ul>
@@ -1736,6 +1774,36 @@ class UserType extends AbstractType
       {% endfor %}
     </div>
   {% endif %}
+{% endblock %}
+
+
+# templates/commande/new.html.twig
+
+{% extends 'base.html.twig' %}
+
+{% block title %}Nouvelle commande{% endblock %}
+
+{% block body %}
+  <h1 class="text-center mb-4">🧾 Nouvelle commande</h1>
+
+  <div id="order-review-container">
+    <p class="alert alert-info">Chargement de votre commande...</p>
+  </div>
+
+  <form id="order-form" method="POST" action="{{ path('commande_enregistrer') }}" class="mt-3">
+    <input type="hidden" name="items" id="order-items-input">
+    <button type="submit" class="btn btn-success w-100 rounded-3">Confirmer la commande</button>
+  </form>
+{% endblock %}
+
+{% block javascripts %}
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      if (window.Cart && typeof window.Cart.renderOrderReview === "function") {
+        window.Cart.renderOrderReview();
+      }
+    });
+  </script>
 {% endblock %}
 
 
@@ -1763,31 +1831,48 @@ class UserType extends AbstractType
 
 {% extends 'base.html.twig' %}
 
-{% block title %}{{ plante.name }}{% endblock %}
+{% block title %}
+	{{ plante.name }}
+{% endblock %}
 
 {% block body %}
-  <div class="card shadow-lg rounded-3">
-    <div class="card-body">
-      <h1 class="card-title">{{ plante.name }}</h1>
+	<div class="card shadow-lg rounded-3">
+		<div class="card-body">
+			<h1 class="card-title">{{ plante.name }}</h1>
 
-      <p><strong>Prix :</strong> {{ plante.price }} €</p>
+			<p>
+				<strong>Prix :</strong>
+				{{ plante.price }}
+				€</p>
 
-      {% if plante.description %}
-        <p><strong>Description :</strong> {{ plante.description }}</p>
-      {% endif %}
+			{% if plante.description %}
+				<p>
+					<strong>Description :</strong>
+					{{ plante.description }}</p>
+			{% endif %}
 
-      <p><strong>Stock :</strong> {{ plante.stock }}</p>
+			<p>
+				<strong>Stock :</strong>
+				{{ plante.stock }}</p>
 
-      <div class="d-flex gap-2 flex-wrap mb-3">
-        <button class="btn btn-success rounded-3"
-                onclick="Cart.add({{ plante.id }}, '{{ plante.name|e('js') }}', {{ plante.price }}, {{ plante.stock }})">
-          Ajouter au panier
-        </button>
-      </div>
+			<div class="d-flex gap-2 flex-wrap mb-3">
+				<button class="btn btn-success rounded-3" onclick="window.Cart.add({{ plante.id }}, '{{ plante.name|e('js') }}', {{ plante.price }}, {{ plante.stock }})">
+					Ajouter au panier
+				</button>
 
-      <a class="btn btn-secondary rounded-3" href="{{ path('accueil') }}">Retour</a>
-    </div>
-  </div>
+				{% if app.user and app.user.admin %}
+					<a href="{{ path('admin_plante_edit', { id: plante.id }) }}" class="btn btn-warning rounded-3">Modifier</a>
+					<form method="POST" action="{{ path('admin_plante_delete', { id: plante.id }) }}" class="d-inline" onsubmit="return confirm('Supprimer ?')">
+						<input type="hidden" name="_token" value="{{ csrf_token('delete' ~ plante.id) }}">
+						<button class="btn btn-danger rounded-3">Supprimer</button>
+					</form>
+				{% endif %}
+			</div>
+
+
+			<a class="btn btn-secondary rounded-3" href="{{ path('accueil') }}">Retour</a>
+		</div>
+	</div>
 {% endblock %}
 
 
@@ -1819,7 +1904,7 @@ class UserType extends AbstractType
               {% endif %}
             </p>
             <button class="btn btn-success w-100 rounded-3"
-                    onclick="Cart.add({{ plant.id }}, '{{ plant.name }}', {{ plant.price }}, {{ plant.stock }})">
+                    onclick="window.Cart.add({{ plant.id }}, '{{ plant.name }}', {{ plant.price }}, {{ plant.stock }})">
               Ajouter au panier
             </button>
           </div>
@@ -1886,7 +1971,7 @@ class UserType extends AbstractType
 	</div>
 
 	<div id="cart-actions" class="d-flex justify-content-between mt-4 d-none">
-		<button class="btn btn-outline-secondary" onclick="Cart.clear()">Vider le panier</button>
+		<button class="btn btn-outline-secondary" onclick="window.Cart.clear()">Vider le panier</button>
 		<a href="{{ path('commande_creer') }}" class="btn btn-success">Passer la commande</a>
 	</div>
 {% endblock %}
@@ -1938,7 +2023,7 @@ class UserType extends AbstractType
 
 # templates/partials/_navbar.html.twig
 
-<nav class="navbar navbar-expand-lg navbar-dark rounded-3 navbar-custom px-3">
+<nav class="navbar navbar-expand-lg navbar-dark rounded-3 nav-bar-color px-3">
   <a class="navbar-brand fw-bold text-white" href="{{ path('accueil') }}">🌿 PlantShop</a>
   <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navBar">
     <span class="navbar-toggler-icon"></span>
@@ -1953,20 +2038,20 @@ class UserType extends AbstractType
       {% endif %}
 
       <li class="nav-item">
-        <a class="nav-link" id="cart-link" href="{{ path('panier_index') }}">Mon Panier</a>
+        <a class="nav-link nav-bar-buttons-color" id="cart-link" href="{{ path('panier_index') }}">Mon Panier</a>
       </li>
 
       {% if app.user %}
         <li class="nav-item">
-          <a class="nav-link" href="{{ path('commandes_index') }}">Mes commandes</a>
+          <a class="nav-link nav-bar-buttons-color" href="{{ path('commandes_index') }}">Mes commandes</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="{{ path('utilisateur_afficher', {id: app.user.id}) }}">Profil</a>
+          <a class="nav-link nav-bar-buttons-color" href="{{ path('utilisateur_afficher', {id: app.user.id}) }}">Profil</a>
         </li>
 
         {% if app.user.admin %}
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#">Admin</a>
+            <a class="nav-link dropdown-toggle nav-bar-buttons-color" data-bs-toggle="dropdown" href="#">Admin</a>
             <ul class="dropdown-menu">
               <li><a class="dropdown-item" href="{{ path('admin_plantes_index') }}">Plantes</a></li>
               <li><a class="dropdown-item" href="{{ path('admin_utilisateurs_index') }}">Utilisateurs</a></li>
@@ -1977,17 +2062,17 @@ class UserType extends AbstractType
         <li class="nav-item ms-2">
           <form method="post" action="{{ path('app_logout') }}" class="d-inline">
             <input type="hidden" name="_token" value="{{ csrf_token('logout') }}">
-            <button type="submit" class="nav-link btn btn-link px-0 align-baseline" style="text-decoration: none;">
+            <button type="submit" class="nav-link btn btn-link px-0 align-baseline nav-bar-buttons-color" style="text-decoration: none;">
               Déconnexion
             </button>
           </form>
         </li>
       {% else %}
         <li class="nav-item">
-          <a class="nav-link" href="{{ path('app_register') }}">S’inscrire</a>
+          <a class="nav-link nav-bar-buttons-color" href="{{ path('app_register') }}">S’inscrire</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="{{ path('app_login') }}">Se connecter</a>
+          <a class="nav-link nav-bar-buttons-color" href="{{ path('app_login') }}">Se connecter</a>
         </li>
       {% endif %}
     </ul>
@@ -2004,6 +2089,24 @@ class UserType extends AbstractType
     </div>
   {% endfor %}
 {% endfor %}
+
+
+# public/js/commande.js
+
+fetch('/commandes', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: 'items=' + encodeURIComponent(JSON.stringify(items)) // "items" = votre payload JS
+})
+.then(response => response.text().then(text => {
+    if (!response.ok) {
+        console.log('Erreur serveur :', text); // Affiche la réponse PHP dans la console JS
+    } else {
+        // Traitement normal si succès
+    }
+}));
 
 
 # public/js/cart.js
@@ -2184,6 +2287,10 @@ class Cart {
 			alert.className = "alert alert-info";
 			alert.textContent = "Votre panier est vide.";
 			container.appendChild(alert);
+			const actions = document.getElementById("cart-actions");
+			if (actions) {
+				actions.classList.add("d-none");
+			}
 			return;
 		}
 
@@ -2191,7 +2298,7 @@ class Cart {
 		table.className = "table";
 
 		const thead = document.createElement("thead");
-		thead.className = "table-dark";
+		thead.className = "table-danger";
 		const headerRow = document.createElement("tr");
 		["Plante", "Quantité", "Action"].forEach((text) => {
 			const th = document.createElement("th");
@@ -2255,12 +2362,98 @@ class Cart {
 			actions.classList.toggle("d-none", Object.keys(cart).length === 0);
 		}
 	}
+
+	/**
+	 * Affiche le récapitulatif de commande dans la page nouvelle commande.
+	 * Remplit aussi le champ masqué pour l'envoi du panier.
+	 *
+	 * @container HTMLElement cible contenant l'affichage de la commande
+	 * @input     Champ hidden HTML pour sérialiser le panier
+	 */
+	renderOrderReview(
+		containerId = "order-review-container",
+		inputId = "order-items-input"
+	) {
+		const container = document.getElementById(containerId);
+		const input = document.getElementById(inputId);
+		if (!container || !input) return;
+
+		const cart = this.get();
+
+		if (Object.keys(cart).length === 0) {
+			const alert = document.createElement("p");
+			alert.className = "alert alert-warning";
+			alert.textContent = "Votre panier est vide.";
+			container.innerHTML = "";
+			container.appendChild(alert);
+			input.value = "";
+			return;
+		}
+
+		const table = document.createElement("table");
+		table.className = "table shadow";
+
+		const thead = document.createElement("thead");
+		thead.className = "table-danger";
+		const headerRow = document.createElement("tr");
+		["Plante", "Quantité", "Total"].forEach((text) => {
+			const th = document.createElement("th");
+			th.textContent = text;
+			headerRow.appendChild(th);
+		});
+		thead.appendChild(headerRow);
+		table.appendChild(thead);
+
+		const tbody = document.createElement("tbody");
+		let total = 0;
+		const items = [];
+
+		for (const id in cart) {
+			const item = cart[id];
+			const subtotal = item.price * item.quantity;
+			total += subtotal;
+
+			const row = document.createElement("tr");
+
+			const tdName = document.createElement("td");
+			const link = document.createElement("a");
+			link.href = `/plantes/${item.id}`;
+			link.className = "cart-plant-link";
+			link.textContent = item.name;
+			tdName.appendChild(link);
+
+			const tdQty = document.createElement("td");
+			tdQty.textContent = item.quantity;
+
+			const tdTotal = document.createElement("td");
+			tdTotal.textContent = `${subtotal} €`;
+
+			row.appendChild(tdName);
+			row.appendChild(tdQty);
+			row.appendChild(tdTotal);
+
+			tbody.appendChild(row);
+
+			items.push({ plant_id: parseInt(id), quantity: item.quantity });
+		}
+
+		table.appendChild(tbody);
+		container.innerHTML = "";
+		container.appendChild(table);
+
+		const totalEl = document.createElement("p");
+		totalEl.className = "text-end fw-bold";
+		totalEl.textContent = `Total : ${total} €`;
+		container.appendChild(totalEl);
+
+		input.value = JSON.stringify(items);
+	}
 }
 
 // Initialisation
 
 document.addEventListener("DOMContentLoaded", () => {
-  window.Cart = new Cart();
+	window.Cart = new Cart();
 	window.Cart.updateNavbarCount();
 	window.Cart.render();
 });
@@ -2268,8 +2461,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
 # public/css/custom.css
 
-.navbar-custom {
-  background-color: #c62828 !important; /* rouge foncé */
+.nav-bar-color {
+  background-color: #c62828;
+}
+
+.nav-bar-buttons-color {
+  color: #ffbbb6;
+  transition: color ease;
+}
+
+.nav-bar-buttons-color:hover {
+  color: #5c1616;
 }
 
 ==== STRUCTURE DU PROJET (filtres appliqués) ====
@@ -2288,6 +2490,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── doctrine_migrations.yaml
 │   │   ├── doctrine.yaml
 │   │   ├── framework.yaml
+│   │   ├── monolog.yaml
 │   │   ├── routing.yaml
 │   │   ├── security.yaml
 │   │   ├── twig.yaml
@@ -2344,6 +2547,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 05/
 │   │   │   ├── 2073faca828c3b85f45b5de50cbb6cca61cd40
 │   │   │   ├── 2103e2eaeb9516e4372d1c4aec16918647ce64
+│   │   │   ├── 3df825df467e94c7cb303658f4dcd2f343a883
 │   │   │   └── f267cb7aa3b2cb612e318a1f5d4b036655a1f1
 │   │   ├── 06/
 │   │   │   ├── e6535c82887143f06e62dc1c730b64cd0f2e12
@@ -2380,7 +2584,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 64bb544cdbd2b8f1a2dfd3dfae9396ff6f3f19
 │   │   │   └── bb4086ade75247b4cda6e3148fa64f7733789f
 │   │   ├── 13/
-│   │   │   └── 2eb78090b484991c22c6feb7b786c6a24e6dbb
+│   │   │   ├── 2eb78090b484991c22c6feb7b786c6a24e6dbb
+│   │   │   └── e659f186000bb6245642095fee37b9d00777cd
 │   │   ├── 14/
 │   │   │   └── f0c6d42a336d756fb5ebd0ae9c9b889e23ef0d
 │   │   ├── 17/
@@ -2397,6 +2602,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── ec4b8ca5ad487b5e0257ffc912f8128aae1dda
 │   │   ├── 1d/
 │   │   │   └── 5e23bb76b1fa9dc92f047bd4b10a7848c27514
+│   │   ├── 1e/
+│   │   │   └── c6792e5a4caa70f0cdb38b7571a4e7bff2c5bc
 │   │   ├── 20/
 │   │   │   ├── 04d444a635085b8f54fd25765eda760c0a2e19
 │   │   │   ├── b9b7d957f4fb4d755110c9e28477da6f4d63e7
@@ -2492,6 +2699,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 4a/
 │   │   │   └── a05d908ce72ae4ed14819726e1d65854ce4a60
 │   │   ├── 4c/
+│   │   │   ├── 4d59dccc48d5f9274d92f39000298173750db4
 │   │   │   └── 96134f6cb6dddc4fee28287a16a076d47b53a6
 │   │   ├── 4e/
 │   │   │   └── efe1537cefc8499226365c0483b0f534ad7022
@@ -2501,7 +2709,9 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 50/
 │   │   │   └── b79862ea7d8a3858a9f3adeaf7ea124a32b0de
 │   │   ├── 51/
-│   │   │   └── 76582e5f184cfcee87a658166392dd1c0da654
+│   │   │   ├── 76582e5f184cfcee87a658166392dd1c0da654
+│   │   │   ├── 949a1066d7bb907eb65efd4aa0e5bbd8a0e43f
+│   │   │   └── bb1cc2441ef3b80d03376e8b1dfac5ca6d53d5
 │   │   ├── 52/
 │   │   │   ├── 4995ba7accd482e673a1199a27a6c67736157f
 │   │   │   └── 8bdcc084dde1077460ba9feb857953716cb384
@@ -2531,7 +2741,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 5e/
 │   │   │   └── bcdb2153c870e7d915f3b3fcdd55821424284c
 │   │   ├── 60/
-│   │   │   └── 16958594c84a5d8425fcc76e62bb4d1fb663c9
+│   │   │   ├── 16958594c84a5d8425fcc76e62bb4d1fb663c9
+│   │   │   └── 236aefeb2ecdc785e27ff419b275baaf27f6b1
 │   │   ├── 61/
 │   │   │   └── af2732aed0d33e53acd2caebd80f3ff9b2025c
 │   │   ├── 62/
@@ -2551,6 +2762,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 5a646c63faedaed5cd66da24210183da65241e
 │   │   │   └── 93d32569c35830c1aee0df6bfce38d73d57281
 │   │   ├── 68/
+│   │   │   ├── 77b4b1f00a8bef1e2d9aeded2a303a863ee6cc
 │   │   │   └── 99b72003fca67f5a56b945cd3e07f5c8a33774
 │   │   ├── 69/
 │   │   │   ├── 5a55d3063aff9d04d3fe24ac7170e8e968647b
@@ -2559,10 +2771,12 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 88a72e3a2b9bf81bc27c6c2300ad573426f3e3
 │   │   │   └── fa57e66ea86c7a192c5b0deca88188b4b81878
 │   │   ├── 6b/
-│   │   │   └── 4322a116d27e2aee5f8b8e2327f91f192d9fbc
+│   │   │   ├── 4322a116d27e2aee5f8b8e2327f91f192d9fbc
+│   │   │   └── 69374a07c0b18cf928242c323e985ea379d593
 │   │   ├── 6c/
 │   │   │   ├── 03bb5f2165830323d3bdfe99612c4731a5d35d
 │   │   │   ├── 623f3080fb2225ca27e43b980997f9e2a4efc1
+│   │   │   ├── 7ba56aa2a1e46674ce74f0b6285a4e3a70824b
 │   │   │   ├── 89ceacf33a3c1bc0d89e9ee301301fecf08c38
 │   │   │   └── ca3227630f38480a0e35d1c734b499a387251d
 │   │   ├── 6d/
@@ -2605,17 +2819,22 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── 8ce52899dcda03a9c7a4e85973ca78197b3d1c
 │   │   ├── 7e/
 │   │   │   ├── 20aa7570331c9050ae32186c073d58c7f6d1f6
+│   │   │   ├── 2f3f2be6ec567a4a3a604a57b1b61fa090b6e2
 │   │   │   └── f28ede96797b35cc048d55473f6290f8fb1991
 │   │   ├── 7f/
 │   │   │   └── 0985aa7fbebdc019e05a9c16c7d6de6cef4bb0
 │   │   ├── 80/
-│   │   │   └── 4c1dfdf5600766ea816c78a6f7f126ce2c164d
+│   │   │   ├── 4c1dfdf5600766ea816c78a6f7f126ce2c164d
+│   │   │   └── 51f2ac0a02cacd3070ca8ff8afef613f6ba85a
 │   │   ├── 81/
 │   │   │   ├── 45bb87641d0fe520ef1e9a0386e93f6bfc8d6b
 │   │   │   ├── 66181c68ab07bfac9aee6e482c7cc24031b8aa
 │   │   │   ├── 8bdf420f06fedb6e48f903d3ed071f08e01ce1
+│   │   │   ├── b86359511adabcc4c5fe9272a074910cdf8eb8
+│   │   │   ├── ba7ea90687c62b065ba9e45148efe96a8e11f2
 │   │   │   └── f5ed8244bf29bf8f99830aecdd1df1ca2c2b74
 │   │   ├── 82/
+│   │   │   ├── 55b47da5412a3e27720111cce668773d4b76f9
 │   │   │   └── e3a754b6a0fcb238b03c0e47d05219fbf9cf89
 │   │   ├── 83/
 │   │   │   └── 0580f237ede3f6505ec449dbd3186bf755c868
@@ -2640,9 +2859,11 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 8b/
 │   │   │   ├── 4c212d3d3d49efcf5c66a8c53fadfeae4d9c1d
 │   │   │   ├── b90bc714f5761305fe3c7bd211222fc822fbd1
-│   │   │   └── d9061d53c8d3913bbb31cc42a41726e128492f
+│   │   │   ├── d9061d53c8d3913bbb31cc42a41726e128492f
+│   │   │   └── e257ce1d7e82a6794adfe790202f03d7209587
 │   │   ├── 8c/
 │   │   │   ├── 7b0fd156142d85d759d7c60e11b896c4e6dbad
+│   │   │   ├── 7e4daa37926479a9550814a59051c5e188a8f1
 │   │   │   ├── c0326c1c2b9b359a6480320e57facf6182cf36
 │   │   │   └── f3f6b2cb94c978e7039e4aa009eb064d0376a4
 │   │   ├── 8d/
@@ -2659,7 +2880,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── bd0984b15464de3bb077c38f35335fca8eae8b
 │   │   ├── 95/
 │   │   │   ├── 59ceee35b522b1fc000f53d380026d1e5a76d9
-│   │   │   └── 9f2c589806087100a3780025b473cb1d750d84
+│   │   │   ├── 9f2c589806087100a3780025b473cb1d750d84
+│   │   │   └── d2768bba86f7fa142d91dac3e461d34ecfd4a2
 │   │   ├── 96/
 │   │   │   └── 5055903137140d354a4f037a244c2434ff1b3b
 │   │   ├── 97/
@@ -2673,6 +2895,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── 99/
 │   │   │   ├── 5151b50e92d887c6d14507f5063aa505becd9d
 │   │   │   ├── 82c218d6969c72d4c91e3834e3f535e2dfe68b
+│   │   │   ├── e12ad1c2bedcafb4d744a2f0953c7d6a0cec07
 │   │   │   └── e5a333ca0b8b9e3b372201cfbd03a03d94ee0e
 │   │   ├── 9a/
 │   │   │   └── 153b40e933861fb75827584204a77390e92f97
@@ -2705,11 +2928,13 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── 9d3d1dea4e4f065d8cf4b8df682b787f65064c
 │   │   ├── a7/
 │   │   │   ├── 2d3c8571c00912d46a5dafffdd540e5e9046ca
+│   │   │   ├── 33a9c5e724b096e5bf63f46b4c797b7b2eca53
 │   │   │   └── a3864876bf7b9ce15d08486d900bd773913312
 │   │   ├── a8/
 │   │   │   ├── 80b1a2deee8eb301a4400302abba2f8b389d1c
 │   │   │   └── fa67f0f2d5f763d3988de560139434e18846d4
 │   │   ├── aa/
+│   │   │   ├── 4d5dafb7cc3ce3709b63212d2744c9eff80cfb
 │   │   │   ├── 63e47f3d6e4628c8d8179272e102c7d3bdc063
 │   │   │   ├── cc14a54977fc980dcc3a9ae075b8457aba73d0
 │   │   │   └── f57de1ed423ef6a54322c3e4a6dcbcad04fcbe
@@ -2733,13 +2958,17 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── b2/
 │   │   │   ├── 51d54fddad9edd4b0bb75c866a23c6fea36f2d
 │   │   │   ├── 9153bdebc8c935907c000813740c61a20275d8
+│   │   │   ├── e24c8f299830922b985bddd4b49a93ba64ae71
 │   │   │   └── e4826e79698e2cc41a9fd358370c0efffd6f18
 │   │   ├── b4/
 │   │   │   ├── 1241ecc1cb4b39b6204aef79a2ae1314107e3f
 │   │   │   ├── 89e11f92695ee37ce0ee16437396cb89b58f29
 │   │   │   └── f9247afe96fc17bcb9dee23d3e2fbd6d3c31a5
+│   │   ├── b5/
+│   │   │   └── 0b3763b01b3a543c48b8928e565fe35686df42
 │   │   ├── b6/
-│   │   │   └── 26900bde0e0ce1e476235ca845695730fe7968
+│   │   │   ├── 26900bde0e0ce1e476235ca845695730fe7968
+│   │   │   └── d786ce173c08f31881c42a280fdee0dac1e3f6
 │   │   ├── b7/
 │   │   │   └── 59e370c3d4633a93011e90597ef6a3ffdadc32
 │   │   ├── b8/
@@ -2755,6 +2984,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 2e10869c512839365fa6821a19d31b67fa3b0d
 │   │   │   └── 42fadc17c68059dac83ea24cc2961299073faf
 │   │   ├── bc/
+│   │   │   ├── 51570cf8c51c18630c915de62c64936d1e1a46
 │   │   │   ├── 54e41b4ccd2aa77fec03b96378e8d1d939269f
 │   │   │   └── 5bcfcfdcda26c45ca11ba675f854276d19548c
 │   │   ├── bd/
@@ -2762,11 +2992,16 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── be/
 │   │   │   └── 5e4dc46f7b63913bc773edb521c5f9e575d08c
 │   │   ├── bf/
+│   │   │   ├── 4081bb6fa6a5f1e3b659b2a8428ab8df4a57b2
 │   │   │   ├── 6daad09b60b4ccfd296ad4ad3977dc8c01ea42
 │   │   │   └── fa1d83528569933830b895f43ab100ca4cf5b2
+│   │   ├── c0/
+│   │   │   ├── 2dd27772ff377b1f570c7d5adb36883b48ebe8
+│   │   │   └── fa590d8dca1cc3298aa2ca791f04d794e3744e
 │   │   ├── c1/
 │   │   │   └── ce59cf5841aaca1e612458acf78d7b99526d17
 │   │   ├── c2/
+│   │   │   ├── 17c337122f613e1e0dfece6f576193d312fa60
 │   │   │   └── 414007691ac7644c05cd40b4df3227d6998033
 │   │   ├── c3/
 │   │   │   └── 066f5f2e35811065d2bdeb0a02871503ac2993
@@ -2798,8 +3033,10 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── d4ed3541352b4d4475a046423255675d89be18
 │   │   │   └── de71f2437895076e94e2b1c7dac8e616cd08e9
 │   │   ├── d0/
+│   │   │   ├── 4abe9faaeab761af302283dccce4708cc51f35
 │   │   │   ├── 4d8ba0098e2203e6626cd3d511a92d22f2def1
 │   │   │   ├── 7411af655df49f4fb1ae089d0149fad9e8807c
+│   │   │   ├── 7d9c175a62bc77b92c41c3e4bd250dcd493742
 │   │   │   └── dc1c041eb4a1a0c5cb5955fc20266923e69ece
 │   │   ├── d2/
 │   │   │   └── 52fe3285a4d2478a753f8c9beeb62221305f39
@@ -2809,7 +3046,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── d2f9ec0ce45209e9be89e5aa447745656607e1
 │   │   │   └── de64c6679aeacf0b9b83945bb38b7ee7f4fdcf
 │   │   ├── d6/
-│   │   │   └── 6f22415ba3b6c1576d31232ecc70b0e3968076
+│   │   │   ├── 6f22415ba3b6c1576d31232ecc70b0e3968076
+│   │   │   └── d66dcd0eb00eecf282843c7336670e752cd240
 │   │   ├── d8/
 │   │   │   ├── c63d7a759288fff327f60ca1e2933aca9a96d8
 │   │   │   └── d530e2c36a68f7916acdfa16c9afafcad06bf0
@@ -2833,12 +3071,16 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   └── 8f52ffbd646212f865c877ac74058737a40611
 │   │   ├── e2/
 │   │   │   └── bead1a38d94ae4a700f2f100e925cdafbcc35a
+│   │   ├── e3/
+│   │   │   └── cc52fd13bc5fb3728b9d406c07e02f556bddb0
 │   │   ├── e5/
 │   │   │   └── 1659e24b09afa03ba4b2ac06320b9f865ddc21
 │   │   ├── e6/
 │   │   │   └── 9de29bb2d1d6434b8b29ae775ad8c2e48c5391
 │   │   ├── e7/
 │   │   │   └── 68ea90521839e354685eec742befafe49572b4
+│   │   ├── e8/
+│   │   │   └── a43562467d94b80781759fc8d301af68facd75
 │   │   ├── e9/
 │   │   │   └── 71363ed556315f7387ae64c51a040d0e8a97d6
 │   │   ├── ea/
@@ -2848,6 +3090,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   ├── ed/
 │   │   │   ├── 2fe51e29ee4768228d56ce2cbc9c466a7c7909
 │   │   │   └── 35f3f3a06e2da27d36049ab581888c50afb7b2
+│   │   ├── ef/
+│   │   │   └── 4fda616cd4b19c642096fcbad18ed40ac4bfd5
 │   │   ├── f0/
 │   │   │   ├── 337a699d16460f8c5fbf48925d61aa13261f4c
 │   │   │   └── 7048de8b960e6d463a3be80cca6e40d19b47db
@@ -2856,6 +3100,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── ea71afbb0865df525f882641561f447fc79e2d
 │   │   │   └── ec7e9752d5d5c00f09f220d756c9c7847b6697
 │   │   ├── f2/
+│   │   │   ├── 0084c967e429b0fd0e8e4d8ab8155fab368db2
 │   │   │   ├── 1b280d578a4d9b110e4a5c3045c3bfe4e06ded
 │   │   │   └── 443838b2b9d94febd7f0cf3f873a2024b25ddd
 │   │   ├── f3/
@@ -2870,7 +3115,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   │   ├── 4654376639f2d3739f092ce6b5473ae4d1b417
 │   │   │   └── f71fb6e535d0bcc0421b84c82f3c8c20c8d633
 │   │   ├── f7/
-│   │   │   └── 4bbd09239237bce6ba8cff480ccdc69970f344
+│   │   │   ├── 4bbd09239237bce6ba8cff480ccdc69970f344
+│   │   │   └── 9e08d07b65bbab1c93d39650e7dc3505595b8f
 │   │   ├── f8/
 │   │   │   └── 53be15cf348ec1b6caaff738de0153eb9eeef0
 │   │   ├── fa/
@@ -2902,7 +3148,8 @@ document.addEventListener("DOMContentLoaded", () => {
 │   │   └── custom.css
 │   ├── index.php
 │   └── js/
-│       └── cart.js
+│       ├── cart.js
+│       └── commande.js
 ├── src/
 │   ├── Command/
 │   │   ├── SeedDevCommand.php
@@ -2949,6 +3196,7 @@ document.addEventListener("DOMContentLoaded", () => {
 │   ├── commande/
 │   │   ├── checkout.html.twig
 │   │   ├── index.html.twig
+│   │   ├── new.html.twig
 │   │   └── success.html.twig
 │   ├── panier/
 │   │   └── index.html.twig
@@ -2970,4 +3218,4 @@ document.addEventListener("DOMContentLoaded", () => {
 │       └── show.html.twig
 └── users.txt
 
-240 directories, 456 files
+246 directories, 496 files

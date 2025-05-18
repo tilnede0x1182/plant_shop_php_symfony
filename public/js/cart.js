@@ -185,7 +185,7 @@ class Cart {
 		table.className = "table";
 
 		const thead = document.createElement("thead");
-		thead.className = "table-dark";
+		thead.className = "table-danger";
 		const headerRow = document.createElement("tr");
 		["Plante", "Quantité", "Action"].forEach((text) => {
 			const th = document.createElement("th");
@@ -281,6 +281,7 @@ class Cart {
 		table.className = "table shadow";
 
 		const thead = document.createElement("thead");
+		thead.className = "table-danger";
 		const headerRow = document.createElement("tr");
 		["Plante", "Quantité", "Total"].forEach((text) => {
 			const th = document.createElement("th");

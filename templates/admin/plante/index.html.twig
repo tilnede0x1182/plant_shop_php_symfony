@@ -1,35 +1,41 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Admin - Plantes{% endblock %}
+{% block title %}Admin - Plantes
+{% endblock %}
 
 {% block body %}
-  <h1 class="mb-4">Gestion des plantes</h1>
-  <a class="btn btn-danger rounded-3 mb-3" href="{{ path('admin_plante_new') }}">Nouvelle plante</a>
+	<h1 class="mb-4">Gestion des plantes</h1>
+	<a class="btn btn-danger rounded-3 mb-3" href="{{ path('admin_plante_new') }}">Nouvelle plante</a>
 
-  <table class="table table-hover table-bordered rounded-3 overflow-hidden">
-    <thead class="table-danger">
-      <tr>
-        <th>Nom</th>
-        <th>Prix</th>
-        <th>Stock</th>
-        <th class="text-center">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-    {% for plant in plantes %}
-      <tr>
-        <td>{{ plant.name }}</td>
-        <td>{{ plant.price }} €</td>
-        <td>{{ plant.stock }}</td>
-        <td class="text-center">
-          <a class="btn btn-sm btn-outline-dark rounded-3" href="{{ path('admin_plante_edit', {id: plant.id}) }}">✏</a>
-          <form method="post" action="{{ path('admin_plante_delete', {id: plant.id}) }}" class="d-inline" onsubmit="return confirm('Supprimer ?')">
-            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ plant.id) }}">
-            <button class="btn btn-sm btn-danger rounded-3">🗑</button>
-          </form>
-        </td>
-      </tr>
-    {% endfor %}
-    </tbody>
-  </table>
+	<table class="table table-hover table-bordered rounded-3 overflow-hidden">
+		<thead class="table-danger">
+			<tr>
+				<th>Nom</th>
+				<th>Prix</th>
+				<th>Stock</th>
+				<th class="text-center">Actions</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for plant in plantes %}
+				<tr>
+					<td>
+						<a href="{{ path('plante_afficher', { id: plant.id }) }}" class="text-decoration-none text-dark">
+							{{ plant.name }}
+						</a>
+					</td>
+					<td>{{ plant.price }}
+						€</td>
+					<td>{{ plant.stock }}</td>
+					<td class="text-center">
+						<a class="btn btn-sm btn-outline-dark rounded-3" href="{{ path('admin_plante_edit', {id: plant.id}) }}">✏</a>
+						<form method="post" action="{{ path('admin_plante_delete', {id: plant.id}) }}" class="d-inline" onsubmit="return confirm('Supprimer ?')">
+							<input type="hidden" name="_token" value="{{ csrf_token('delete' ~ plant.id) }}">
+							<button class="btn btn-sm btn-danger rounded-3">🗑</button>
+						</form>
+					</td>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
 {% endblock %}

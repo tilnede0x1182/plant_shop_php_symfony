@@ -28,7 +28,7 @@ class Plant
 	#[ORM\Column(type: 'integer')]
 	private int $stock;
 
-	#[ORM\OneToMany(mappedBy: 'plante', targetEntity: OrderItem::class, orphanRemoval: true)]
+	#[ORM\OneToMany(mappedBy: 'plant', targetEntity: OrderItem::class, orphanRemoval: true)]
 	private Collection $articles;
 
 	public function __construct()
@@ -97,7 +97,7 @@ class Plant
 	{
 		if (!$this->articles->contains($item)) {
 			$this->articles[] = $item;
-			$item->setPlante($this);
+			$item->setPlant($this);
 		}
 		return $this;
 	}
@@ -105,8 +105,8 @@ class Plant
 	public function removeArticle(OrderItem $item): self
 	{
 		if ($this->articles->removeElement($item)) {
-			if ($item->getPlante() === $this) {
-				$item->setPlante(null);
+			if ($item->getPlant() === $this) {
+				$item->setPlant(null);
 			}
 		}
 		return $this;

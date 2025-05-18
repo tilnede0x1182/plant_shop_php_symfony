@@ -18,8 +18,8 @@ class OrderItem
 	private ?Order $commande = null;
 
 	#[ORM\ManyToOne(inversedBy: 'articles')]
-	#[ORM\JoinColumn(nullable: false)]
-	private ?Plant $plante = null;
+	#[ORM\JoinColumn(name: 'plant_id', referencedColumnName: 'id', nullable: false)]
+	private ?Plant $plant = null;
 
 	#[ORM\Column(type: 'integer')]
 	private int $quantity;
@@ -40,15 +40,15 @@ class OrderItem
 		return $this;
 	}
 
-	public function getPlante(): ?Plant
+	public function getPlant(): ?Plant
 	{
-		return $this->plante;
+			return $this->plant;
 	}
 
-	public function setPlante(?Plant $plant): self
+	public function setPlant(?Plant $plant): static
 	{
-		$this->plante = $plant;
-		return $this;
+			$this->plant = $plant;
+			return $this;
 	}
 
 	public function getQuantity(): int
