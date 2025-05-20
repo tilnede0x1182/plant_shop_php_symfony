@@ -19,8 +19,35 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 #[AsCommand(name: 'app:seed:dev', description: 'Remplit la base de données de dev avec des données')]
 class SeedDevCommand extends Command
 {
+	//  Variables globales pour la seed
+	const NB_ADMINS = 3;  // 👤 Nombre d'administrateurs à créer
+	const NB_USERS = 20;  // 👥 Nombre d'utilisateurs à créer
+	const NB_PLANTES = 30; // 🌱 Nombre de plantes à créer
+
 	private EntityManagerInterface $em;
 	private UserPasswordHasherInterface $hasher;
+
+	// 60 noms réels de plantes, noms scientifiques entre parenthèses
+	private array $nomsPlantes = [
+		"Rose", "Tulipe", "Lavande", "Orchidée", "Basilic", "Menthe", "Pivoine", "Tournesol",
+		"Cactus (Echinopsis)", "Bambou", "Camomille (Matricaria recutita)", "Sauge (Salvia officinalis)",
+		"Romarin (Rosmarinus officinalis)", "Thym (Thymus vulgaris)", "Laurier-rose (Nerium oleander)",
+		"Aloe vera", "Jasmin (Jasminum officinale)", "Hortensia (Hydrangea macrophylla)",
+		"Marguerite (Leucanthemum vulgare)", "Géranium (Pelargonium graveolens)", "Fuchsia (Fuchsia magellanica)",
+		"Anémone (Anemone coronaria)", "Azalée (Rhododendron simsii)", "Chrysanthème (Chrysanthemum morifolium)",
+		"Digitale pourpre (Digitalis purpurea)", "Glaïeul (Gladiolus hortulanus)", "Lys (Lilium candidum)",
+		"Violette (Viola odorata)", "Muguet (Convallaria majalis)", "Iris (Iris germanica)",
+		"Lavandin (Lavandula intermedia)", "Érable du Japon (Acer palmatum)", "Citronnelle (Cymbopogon citratus)",
+		"Pin parasol (Pinus pinea)", "Cyprès (Cupressus sempervirens)", "Olivier (Olea europaea)",
+		"Papyrus (Cyperus papyrus)", "Figuier (Ficus carica)", "Eucalyptus (Eucalyptus globulus)",
+		"Acacia (Acacia dealbata)", "Bégonia (Begonia semperflorens)", "Calathea (Calathea ornata)",
+		"Dieffenbachia (Dieffenbachia seguine)", "Ficus elastica", "Sansevieria (Sansevieria trifasciata)",
+		"Philodendron (Philodendron scandens)", "Yucca (Yucca elephantipes)", "Zamioculcas zamiifolia",
+		"Monstera deliciosa", "Pothos (Epipremnum aureum)", "Agave (Agave americana)", "Cactus raquette (Opuntia ficus-indica)",
+		"Palmier-dattier (Phoenix dactylifera)", "Amaryllis (Hippeastrum hybridum)", "Bleuet (Centaurea cyanus)",
+		"Cœur-de-Marie (Lamprocapnos spectabilis)", "Croton (Codiaeum variegatum)", "Dracaena (Dracaena marginata)",
+		"Hosta (Hosta plantaginea)", "Lierre (Hedera helix)", "Mimosa (Acacia dealbata)"
+	];
 
 	public function __construct(EntityManagerInterface $em, UserPasswordHasherInterface $hasher)
 	{
@@ -59,7 +86,7 @@ class SeedDevCommand extends Command
 		$users = [];
 
 		$io->section('Création des administrateurs');
-		for ($i = 1; $i <= 3; $i++) {
+		for ($i = 1; $i <= self::NB_ADMINS; $i++) {
 			$user = new User();
 			$user->setName($faker->name());
 			$user->setEmail("admin{$i}@planteshop.com");
@@ -71,7 +98,7 @@ class SeedDevCommand extends Command
 		}
 
 		$io->section('Création des utilisateurs');
-		for ($i = 1; $i <= 15; $i++) {
+		for ($i = 1; $i <= self::NB_USERS; $i++) {
 			$user = new User();
 			$user->setName($faker->name());
 			$user->setEmail($faker->unique()->safeEmail());
@@ -85,21 +112,33 @@ class SeedDevCommand extends Command
 		return $users;
 	}
 
+	/**
+	 * Retourne le nom de la plante selon la logique Ruby/Rails
+	 * @param int $iterator Index de création (commence à 0)
+	 * @return string
+	 */
+	private function getPlantName(int $iterator): string
+	{
+		$noms = $this->nomsPlantes;
+		$taille = count($noms);
+		if (self::NB_PLANTES > $taille) {
+			return $noms[$iterator % $taille] . ' ' . (intdiv($iterator, $taille) + 1);
+		}
+		return $noms[$iterator % $taille];
+	}
+
 	private function seedPlants(Generator $faker): array
 	{
-		$noms = ['Rose', 'Tulipe', 'Lavande', 'Orchidée', 'Basilic', 'Menthe', 'Pivoine', 'Tournesol', 'Cactus', 'Bambou'];
 		$plants = [];
-
-		foreach (range(1, 30) as $i) {
+		for ($iterator = 0; $iterator < self::NB_PLANTES; $iterator++) {
 			$plant = new Plant();
-			$plant->setName($noms[$i % count($noms)] . " $i");
+			$plant->setName($this->getPlantName($iterator));
 			$plant->setDescription($faker->sentence(10));
 			$plant->setPrice(rand(5, 50));
 			$plant->setStock(rand(5, 30));
 			$this->em->persist($plant);
 			$plants[] = $plant;
 		}
-
 		return $plants;
 	}
 
