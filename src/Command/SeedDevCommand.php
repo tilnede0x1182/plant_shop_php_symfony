@@ -49,6 +49,12 @@ class SeedDevCommand extends Command
 		"Hosta (Hosta plantaginea)", "Lierre (Hedera helix)", "Mimosa (Acacia dealbata)"
 	];
 
+	/**
+	 * Constructeur du command de seed.
+	 *
+	 * @param EntityManagerInterface $em Gestionnaire d'entités
+	 * @param UserPasswordHasherInterface $hasher Hasheur de mot de passe
+	 */
 	public function __construct(EntityManagerInterface $em, UserPasswordHasherInterface $hasher)
 	{
 		parent::__construct();
@@ -56,6 +62,13 @@ class SeedDevCommand extends Command
 		$this->hasher = $hasher;
 	}
 
+	/**
+	 * Exécute la commande de seed.
+	 *
+	 * @param InputInterface $input Interface d'entrée
+	 * @param OutputInterface $output Interface de sortie
+	 * @return int Code de retour
+	 */
 	protected function execute(InputInterface $input, OutputInterface $output): int
 	{
 		$io = new SymfonyStyle($input, $output);
@@ -71,6 +84,11 @@ class SeedDevCommand extends Command
 		return Command::SUCCESS;
 	}
 
+	/**
+	 * Réinitialise la base de données.
+	 *
+	 * @return void
+	 */
 	private function resetDatabase(): void
 	{
 		$this->em->getConnection()->executeQuery('SET session_replication_role = replica');
@@ -81,6 +99,13 @@ class SeedDevCommand extends Command
 		$this->em->getConnection()->executeQuery('SET session_replication_role = DEFAULT');
 	}
 
+	/**
+	 * Crée les utilisateurs de test.
+	 *
+	 * @param Generator $faker Générateur Faker
+	 * @param SymfonyStyle $io Interface de sortie stylée
+	 * @return array Liste des utilisateurs créés
+	 */
 	private function seedUsers(Generator $faker, SymfonyStyle $io): array
 	{
 		$users = [];
@@ -127,6 +152,12 @@ class SeedDevCommand extends Command
 		return $noms[$iterator % $taille];
 	}
 
+	/**
+	 * Crée les plantes de test.
+	 *
+	 * @param Generator $faker Générateur Faker
+	 * @return array Liste des plantes créées
+	 */
 	private function seedPlants(Generator $faker): array
 	{
 		$plants = [];
@@ -142,6 +173,12 @@ class SeedDevCommand extends Command
 		return $plants;
 	}
 
+	/**
+	 * Sauvegarde les identifiants des utilisateurs dans un fichier.
+	 *
+	 * @param array $users Liste des utilisateurs
+	 * @return void
+	 */
 	private function saveUserCredentialsFile(array $users): void
 	{
 		$content = "=== ADMINS ===\n";

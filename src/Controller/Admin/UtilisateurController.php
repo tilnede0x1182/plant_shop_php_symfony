@@ -14,6 +14,12 @@ use Symfony\Component\Routing\Annotation\Route;
 #[Route('/admin/utilisateurs')]
 class UtilisateurController extends AbstractController
 {
+	/**
+	 * Affiche la liste des utilisateurs (admin).
+	 *
+	 * @param EntityManagerInterface $em Gestionnaire d'entités
+	 * @return Response
+	 */
 	#[Route('', name: 'admin_utilisateurs_index')]
 	public function index(EntityManagerInterface $em): Response
 	{
@@ -21,6 +27,14 @@ class UtilisateurController extends AbstractController
 		return $this->render('admin/utilisateur/index.html.twig', ['users' => $users]);
 	}
 
+	/**
+	 * Affiche le formulaire de création d'un utilisateur.
+	 *
+	 * @param Request $request Requête HTTP
+	 * @param EntityManagerInterface $em Gestionnaire d'entités
+	 * @param UserPasswordHasherInterface $hasher Hasheur de mot de passe
+	 * @return Response
+	 */
 	#[Route('/nouveau', name: 'admin_users_create')]
 	public function create(Request $request, EntityManagerInterface $em, UserPasswordHasherInterface $hasher): Response
 	{
@@ -44,6 +58,12 @@ class UtilisateurController extends AbstractController
 		]);
 	}
 
+	/**
+	 * Affiche le détail d'un utilisateur.
+	 *
+	 * @param User $user Utilisateur à afficher
+	 * @return Response
+	 */
 	#[Route('/{id}', name: 'admin_users_show', methods: ['GET'])]
 	public function show(User $user): Response
 	{
@@ -52,6 +72,15 @@ class UtilisateurController extends AbstractController
 		]);
 	}
 
+	/**
+	 * Affiche le formulaire d'édition d'un utilisateur.
+	 *
+	 * @param User $user Utilisateur à éditer
+	 * @param Request $request Requête HTTP
+	 * @param EntityManagerInterface $em Gestionnaire d'entités
+	 * @param UserPasswordHasherInterface $hasher Hasheur de mot de passe
+	 * @return Response
+	 */
 	#[Route('/{id}/modifier', name: 'admin_users_edit')]
 	public function edit(User $user, Request $request, EntityManagerInterface $em, UserPasswordHasherInterface $hasher): Response
 	{
@@ -71,6 +100,14 @@ class UtilisateurController extends AbstractController
 		]);
 	}
 
+	/**
+	 * Supprime un utilisateur.
+	 *
+	 * @param Request $request Requête HTTP
+	 * @param User $user Utilisateur à supprimer
+	 * @param EntityManagerInterface $em Gestionnaire d'entités
+	 * @return Response
+	 */
 	#[Route('/{id}/supprimer', name: 'admin_users_delete', methods: ['POST'])]
 	public function delete(Request $request, User $user, EntityManagerInterface $em): Response
 	{

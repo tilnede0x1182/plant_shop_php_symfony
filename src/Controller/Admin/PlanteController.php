@@ -13,6 +13,12 @@ use Symfony\Component\Routing\Annotation\Route;
 #[Route('/admin/plantes')]
 class PlanteController extends AbstractController
 {
+	/**
+	 * Affiche la liste des plantes (admin).
+	 *
+	 * @param EntityManagerInterface $gestionnaire Gestionnaire d'entités
+	 * @return Response
+	 */
 	#[Route('', name: 'admin_plantes_index')]
 	public function index(EntityManagerInterface $gestionnaire): Response
 	{
@@ -20,6 +26,13 @@ class PlanteController extends AbstractController
 		return $this->render('admin/plante/index.html.twig', ['plantes' => $plantes]);
 	}
 
+	/**
+	 * Affiche le formulaire de création d'une plante.
+	 *
+	 * @param Request $request Requête HTTP
+	 * @param EntityManagerInterface $em Gestionnaire d'entités
+	 * @return Response
+	 */
 	#[Route('/nouvelle', name: 'admin_plante_new')]
 	public function create(Request $request, EntityManagerInterface $em): Response
 	{
@@ -36,6 +49,14 @@ class PlanteController extends AbstractController
 		return $this->render('admin/plante/new.html.twig', ['form' => $form->createView()]);
 	}
 
+	/**
+	 * Affiche le formulaire d'édition d'une plante.
+	 *
+	 * @param Plant $plant Plante à éditer
+	 * @param Request $request Requête HTTP
+	 * @param EntityManagerInterface $em Gestionnaire d'entités
+	 * @return Response
+	 */
 	#[Route('/{id}/modifier', name: 'admin_plante_edit')]
 	public function edit(Plant $plant, Request $request, EntityManagerInterface $em): Response
 	{
@@ -50,6 +71,14 @@ class PlanteController extends AbstractController
 		return $this->render('admin/plante/edit.html.twig', ['form' => $form->createView(), 'plant' => $plant]);
 	}
 
+	/**
+	 * Supprime une plante.
+	 *
+	 * @param Request $request Requête HTTP
+	 * @param Plant $plant Plante à supprimer
+	 * @param EntityManagerInterface $em Gestionnaire d'entités
+	 * @return Response
+	 */
 	#[Route('/{id}', name: 'admin_plante_delete', methods: ['POST'])]
 	public function delete(Request $request, Plant $plant, EntityManagerInterface $em): Response
 	{

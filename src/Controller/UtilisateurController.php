@@ -14,6 +14,12 @@ use Symfony\Component\Security\Http\Authentication\UserAuthenticatorInterface;
 
 class UtilisateurController extends AbstractController
 {
+    /**
+     * Affiche le profil d'un utilisateur.
+     *
+     * @param User $utilisateur Utilisateur à afficher
+     * @return Response
+     */
     #[Route('/utilisateurs/{id}', name: 'utilisateur_afficher')]
     public function show(User $utilisateur): Response
     {
@@ -23,6 +29,16 @@ class UtilisateurController extends AbstractController
         ]);
     }
 
+    /**
+     * Affiche et traite le formulaire d'édition du profil.
+     *
+     * @param Request $request Requête HTTP
+     * @param User $utilisateur Utilisateur à éditer
+     * @param EntityManagerInterface $em Gestionnaire d'entités
+     * @param UserAuthenticatorInterface $authenticator Interface d'authentification
+     * @param LoginFormAuthenticator $loginAuthenticator Authentificateur de formulaire
+     * @return Response
+     */
     #[Route('/utilisateurs/{id}/modifier', name: 'utilisateur_modifier')]
     public function edit(
         Request $request,

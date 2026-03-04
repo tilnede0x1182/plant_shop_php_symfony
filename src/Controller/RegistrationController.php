@@ -15,6 +15,15 @@ use Symfony\Component\Routing\Attribute\Route;
 
 class RegistrationController extends AbstractController
 {
+	/**
+	 * Affiche et traite le formulaire d'inscription.
+	 *
+	 * @param Request $request Requête HTTP
+	 * @param UserPasswordHasherInterface $userPasswordHasher Hasheur de mot de passe
+	 * @param Security $security Service de sécurité
+	 * @param EntityManagerInterface $entityManager Gestionnaire d'entités
+	 * @return Response
+	 */
 	#[Route('/register', name: 'app_register')]
 	public function register(Request $request, UserPasswordHasherInterface $userPasswordHasher, Security $security, EntityManagerInterface $entityManager): Response
 	{

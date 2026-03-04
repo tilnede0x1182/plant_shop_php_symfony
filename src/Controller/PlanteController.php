@@ -10,6 +10,12 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class PlanteController extends AbstractController
 {
+	/**
+	 * Affiche la liste des plantes disponibles.
+	 *
+	 * @param EntityManagerInterface $gestionnaire Gestionnaire d'entités
+	 * @return Response
+	 */
 	#[Route('/', name: 'accueil')]
 	public function index(EntityManagerInterface $gestionnaire): Response
 	{
@@ -22,6 +28,12 @@ class PlanteController extends AbstractController
 		return $this->render('plante/index.html.twig', ['plants' => $plantes]);
 	}
 
+	/**
+	 * Affiche le détail d'une plante.
+	 *
+	 * @param Plant $plante Plante à afficher
+	 * @return Response
+	 */
 	#[Route('/plantes/{id}', name: 'plante_afficher')]
 	public function show(Plant $plante): Response
 	{

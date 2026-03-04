@@ -15,6 +15,13 @@ use Symfony\Component\Finder\Finder;
 )]
 class VuesExistenceCheckCommand extends Command
 {
+    /**
+     * Exécute la commande de vérification des vues.
+     *
+     * @param InputInterface $input Interface d'entrée
+     * @param OutputInterface $output Interface de sortie
+     * @return int Code de retour
+     */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);

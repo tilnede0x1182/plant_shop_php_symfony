@@ -16,6 +16,11 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class CommandeController extends AbstractController
 {
+	/**
+	 * Affiche la liste des commandes de l'utilisateur.
+	 *
+	 * @return Response
+	 */
 	#[Route('/commandes', name: 'commandes_index')]
 	public function index(): Response
 	{
@@ -27,6 +32,11 @@ class CommandeController extends AbstractController
 		return $this->render('commande/index.html.twig', ['orders' => $commandes]);
 	}
 
+	/**
+	 * Affiche le formulaire de création de commande.
+	 *
+	 * @return Response
+	 */
 	#[Route('/commandes/nouvelle', name: 'commande_creer')]
 	#[IsGranted('IS_AUTHENTICATED_FULLY')]
 	public function create(): Response
@@ -34,6 +44,15 @@ class CommandeController extends AbstractController
 		return $this->render('commande/new.html.twig');
 	}
 
+	/**
+	 * Enregistre une nouvelle commande.
+	 *
+	 * @param Request $requete Requête HTTP
+	 * @param EntityManagerInterface $gestionnaire Gestionnaire d'entités
+	 * @param PlantRepository $repo Repository des plantes
+	 * @param LoggerInterface $logger Service de log
+	 * @return Response
+	 */
 	#[Route('/commandes/enregistrer', name: 'commande_enregistrer', methods: ['POST'])]
 	public function store(Request $requete, EntityManagerInterface $gestionnaire, PlantRepository $repo, LoggerInterface $logger): Response
 	{
