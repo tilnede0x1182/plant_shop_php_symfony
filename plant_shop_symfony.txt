@@ -2657,7 +2657,6 @@ function showStockAlert(plantName, stock) {
 │   ├── Version20250512104438.php
 │   ├── Version20250512105354.php
 │   └── Version20250518153935.php
-├── plant_shop_symfony.txt
 ├── projet.txt
 ├── public/
 │   ├── css/
@@ -2736,4 +2735,4 @@ function showStockAlert(plantName, stock) {
 │       └── show.html.twig
 └── users.txt
 
-52 directories, 129 files
+52 directories, 128 files
